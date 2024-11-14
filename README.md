@@ -29,11 +29,10 @@ MONGO_PASSWORD=
     npm run dev
 ```
 
-<code>POST</code> <code><b>/v1/api/register</b></code> <code>register</code>
-
-- POST /v1/api/login
-- GET /v1/api/resource //test authentication
-- POST /v1/api/profile //xem profile
-- PATCH /v1/api/profile/update //update thong tin
-- POST /v1/api/profile/upload //upload avatar
-- POST /v1/api/change-pwd //change password
+- <code>POST</code> <code><b>/v1/api/register</b></code> <code>register</code>
+- <code>POST</code> <code><b>/v1/api/login</b></code> <code>login</code>
+- <code>GET</code> <code><b>/v1/api/resource</b></code> <code>test authentication</code>
+- <code>POST</code> <code><b>/v1/api/profile</b></code> <code>get profile</code>
+- <code>PATCH</code> <code><b>/v1/api/profile/update</b></code> <code>update profile</code>
+- <code>POST</code> <code><b>/v1/api/profile/upload</b></code> <code>upload avatar</code>
+- <code>POST</code> <code><b>/v1/api/profile/change-pwd</b></code> <code>change password</code>
