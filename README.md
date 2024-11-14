@@ -1,4 +1,4 @@
-#### Bước 1: Clone repo
+#### Clone repo
 
 ##
 
@@ -6,9 +6,7 @@
 git clone https://github.com/TrungNguyen248/loginsystem.git
 ```
 
-#### Bước 2: mở terminal
-
-```<ruby>
-    cd login_system
-    run
+```
+    cd /login_system
+    npm install
 ```
