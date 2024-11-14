@@ -9,9 +9,9 @@
     npm install
 ```
 
-## Cấu hình env
+#### Cấu hình env
 
-```<ruby>
+```
 #config server port
 PORT=5000 //your_port
 
@@ -21,4 +21,10 @@ MONGO_PORT=27017
 MONGO_DATABASE=your_database
 MONGO_USERNAME=
 MONGO_PASSWORD=
+```
+
+#### Run project
+
+```
+    npm run dev
 ```
