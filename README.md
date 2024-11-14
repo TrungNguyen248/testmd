@@ -29,7 +29,6 @@ MONGO_PASSWORD=
     npm run dev
 ```
 
-<details>
 <code>POST</code> <code><b>/v1/api/register</b></code> <code>register</code>
 
 - POST /v1/api/login
