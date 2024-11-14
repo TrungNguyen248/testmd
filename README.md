@@ -30,7 +30,7 @@ MONGO_PASSWORD=
 ```
 
 <details>
- <summary><code>POST</code> <code><b>/v1/api/register</b></code> <code>register</code></summary>
+<code>POST</code> <code><b>/v1/api/register</b></code> <code>register</code>
 
 - POST /v1/api/login
 - GET /v1/api/resource //test authentication
