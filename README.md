@@ -30,9 +30,8 @@ MONGO_PASSWORD=
 ```
 
 <details>
- <summary><code>POST</code> <code><b>/</b></code> <code>(overwrites all in-memory stub and/or proxy-config)</code></summary>
+ <summary><code>POST</code> <code><b>/v1/api/register</b></code> <code>register</code></summary>
 
-- POST<tab>/v1/api/register
 - POST /v1/api/login
 - GET /v1/api/resource //test authentication
 - POST /v1/api/profile //xem profile
