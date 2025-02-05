@@ -1,0 +1,4046 @@
+<!doctype html>
+<html lang="vi">
+     <head>
+          <meta charset="UTF-8" />
+          <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+          <title>Bản đồ phân tích khu vực</title>
+
+          <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
+          <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
+          <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
+
+          <style>
+               * {
+                    margin: 0;
+                    padding: 0;
+                    box-sizing: border-box;
+               }
+
+               html,
+               body {
+                    height: 100%;
+                    width: 100%;
+                    overflow: hidden;
+                    position: fixed;
+               }
+
+               body {
+                    font-family: 'Segoe UI', Roboto, sans-serif;
+               }
+
+               #map {
+                    height: 100vh;
+                    width: 100vw;
+                    background: #000;
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+               }
+
+               .search-container {
+                    position: relative;
+                    margin: 15px;
+                    z-index: 1000;
+                    display: flex;
+                    gap: 10px;
+                    background: white;
+                    padding: 10px;
+                    border-radius: 8px;
+                    box-shadow: 0 2px 15px rgba(0, 0, 0, 0.1);
+                    width: calc(100% - 30px);
+                    clip-path: polygon(10px 0, calc(100% - 10px) 0, 100% 10px, 100% calc(100% - 10px), calc(100% - 10px) 100%, 10px 100%, 0 calc(100% - 10px), 0 10px);
+               }
+
+               .search-input {
+                    padding: 8px 12px;
+                    border: 1px solid #ddd;
+                    border-radius: 4px;
+                    flex: 1;
+                    font-size: 14px;
+                    outline: none;
+                    transition: border-color 0.3s ease;
+                    clip-path: polygon(8px 0, calc(100% - 8px) 0, 100% 8px, 100% calc(100% - 8px), calc(100% - 8px) 100%, 8px 100%, 0 calc(100% - 8px), 0 8px);
+               }
+
+               .search-input:focus {
+                    border-color: #4caf50;
+               }
+
+               .search-button {
+                    padding: 8px 15px;
+                    background-color: #4caf50;
+                    color: white;
+                    border: none;
+                    border-radius: 4px;
+                    cursor: pointer;
+                    font-size: 14px;
+                    min-width: 45px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    transition: background-color 0.3s ease;
+                    clip-path: polygon(8px 0, calc(100% - 8px) 0, 100% 8px, 100% calc(100% - 8px), calc(100% - 8px) 100%, 8px 100%, 0 calc(100% - 8px), 0 8px);
+               }
+
+               .history-panel {
+                    clip-path: polygon(15px 0, calc(100% - 0px) 0, 100% 0px, 100% calc(100% - 15px), calc(100% - 0px) 100%, 15px 100%, 0 calc(100% - 15px), 0 15px);
+               }
+
+               .search-button:hover {
+                    background-color: #45a049;
+               }
+
+               .top-left-button {
+                    position: fixed;
+                    top: 10px;
+                    right: 10px;
+                    /* Thay đổi từ left thành right */
+                    z-index: 1000;
+                    background: white;
+                    border: none;
+                    padding: 8px 15px;
+                    border-radius: 8px;
+                    box-shadow: 0 2px 15px rgba(0, 0, 0, 0.1);
+                    cursor: pointer;
+                    display: none;
+                    align-items: center;
+                    gap: 8px;
+                    transition: all 0.3s ease;
+                    font-size: 14px;
+                    color: #333;
+               }
+
+               .top-left-button:hover {
+                    background: #f5f5f5;
+                    transform: translateY(-2px);
+               }
+
+               .top-left-button .material-icons {
+                    font-size: 20px;
+               }
+
+               @media (max-width: 768px) {
+                    .top-left-button {
+                         right: 10px;
+                         /* Giữ nguyên bên phải */
+                    }
+               }
+
+               .control-button:hover {
+                    background: #f5f5f5;
+                    transform: translateY(-2px);
+               }
+
+               .control-button.active {
+                    background: #4caf50;
+                    color: white;
+               }
+
+               .control-button:disabled {
+                    opacity: 0.6;
+                    cursor: not-allowed;
+               }
+
+               .control-button:disabled:hover {
+                    transform: none;
+                    background: white;
+               }
+
+               .countries-panel {
+                    clip-path: polygon(15px 0, calc(100% - 0px) 0, 100% 0px, 100% calc(100% - 15px), calc(100% - 0px) 100%, 15px 100%, 0 calc(100% - 15px), 0 15px);
+               }
+
+               .history-panel,
+               .countries-panel {
+                    position: fixed;
+                    right: -300px;
+                    top: 0;
+                    bottom: 0;
+                    width: 300px;
+                    background: white;
+                    transition: all 0.3s ease;
+                    z-index: 1000;
+                    box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
+                    display: flex;
+                    flex-direction: column;
+                    visibility: hidden;
+                    opacity: 0;
+               }
+
+               .history-panel.visible,
+               .countries-panel.visible {
+                    right: 0;
+                    visibility: visible;
+                    opacity: 1;
+               }
+
+               .panel-header {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    padding: 15px 20px;
+                    background: linear-gradient(135deg, #64b5f6 0%, #f48fb1 100%);
+                    color: white;
+               }
+
+               .panel-header h3 {
+                    margin: 0;
+                    padding: 0;
+                    font-size: 18px;
+                    color: #333;
+                    font-weight: 500;
+               }
+
+               .close-button {
+                    background: none;
+                    border: none;
+                    color: #666;
+                    cursor: pointer;
+                    padding: 5px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    transition: all 0.2s ease;
+               }
+
+               .close-button:hover {
+                    color: #ff1744;
+                    transform: scale(1.1);
+               }
+
+               .close-button .material-icons {
+                    font-size: 24px;
+               }
+
+               #history-list,
+               .countries-list {
+                    flex: 1;
+                    overflow-y: auto;
+                    padding: 15px;
+               }
+
+               .history-item {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: flex-start;
+                    padding: 12px;
+                    margin-bottom: 10px;
+                    background: #f8f9fa;
+                    border-radius: 8px;
+                    border: 1px solid #e0e0e0;
+                    transition: all 0.3s ease;
+                    clip-path: polygon(8px 0, calc(100% - 8px) 0, 100% 8px, 100% calc(100% - 8px), calc(100% - 8px) 100%, 8px 100%, 0 calc(100% - 8px), 0 8px);
+               }
+
+               .history-item:hover {
+                    background: #f0f0f0;
+                    transform: translateY(-2px);
+               }
+
+               .country-name {
+                    font-size: 14px;
+                    color: #333;
+               }
+
+               .country-item {
+                    padding: 10px 15px;
+                    margin-bottom: 5px;
+                    background: #f8f9fa;
+                    border-radius: 4px;
+                    cursor: pointer;
+                    transition: all 0.2s ease;
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    /* Đẩy nội dung về hai bên */
+                    clip-path: polygon(8px 0, calc(100% - 8px) 0, 100% 8px, 100% calc(100% - 8px), calc(100% - 8px) 100%, 8px 100%, 0 calc(100% - 8px), 0 8px);
+               }
+
+               .country-flag {
+                    width: 32px;
+                    height: 22px;
+                    object-fit: contain;
+                    border-radius: 2px;
+                    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+               }
+
+               .country-item:hover {
+                    background: #e9ecef;
+                    transform: translateX(5px);
+               }
+
+               .province-item {
+                    padding: 12px;
+                    margin: 5px 0;
+                    background: #fff;
+                    border: 1px solid #dee2e6;
+                    border-radius: 4px;
+                    cursor: pointer;
+                    transition: all 0.2s ease;
+                    clip-path: polygon(8px 0, calc(100% - 8px) 0, 100% 8px, 100% calc(100% - 8px), calc(100% - 8px) 100%, 8px 100%, 0 calc(100% - 8px), 0 8px);
+               }
+
+               .analyze-business-btn {
+                    background: #4caf50;
+                    color: white;
+                    border: none;
+                    padding: 10px 20px;
+                    border-radius: 5px;
+                    cursor: pointer;
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    margin: 0 auto;
+                    transition: all 0.3s ease;
+               }
+
+               .analyze-business-btn:hover {
+                    background: #45a049;
+                    transform: translateY(-2px);
+               }
+
+               .business-analysis-popup {
+                    max-width: 500px;
+                    max-height: 70vh;
+                    /* Giới hạn chiều cao tối đa là 70% viewport height */
+                    overflow-y: auto;
+                    /* Cho phép cuộn dọc */
+                    padding: 20px;
+                    font-family: 'Segoe UI', Roboto, sans-serif;
+               }
+
+               .business-analysis-popup::-webkit-scrollbar {
+                    width: 8px;
+               }
+
+               .business-analysis-popup::-webkit-scrollbar-track {
+                    background: #f1f1f1;
+                    border-radius: 4px;
+               }
+
+               .business-analysis-popup::-webkit-scrollbar-thumb {
+                    background: #888;
+                    border-radius: 4px;
+               }
+
+               .business-analysis-popup::-webkit-scrollbar-thumb:hover {
+                    background: #555;
+               }
+
+               .business-analysis-popup h4 {
+                    color: #2196f3;
+                    margin: 0 0 10px 0;
+                    position: sticky;
+                    top: -25px;
+                    background: white;
+                    padding: 15px 0;
+                    z-index: 1;
+                    border-bottom: 2px solid #e0e0e0;
+                    border-radius: 10px;
+               }
+
+               .business-section {
+                    margin-bottom: 20px;
+                    padding: 15px;
+                    background: #ffffff;
+                    border-radius: 8px;
+                    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+               }
+
+               .business-section-title {
+                    font-weight: 600;
+                    color: #333;
+                    margin-bottom: 15px;
+                    padding-bottom: 8px;
+                    border-bottom: 1px solid #eee;
+               }
+
+               .challenge-item:hover {
+                    background: #e9ecef;
+                    transform: translateX(5px);
+               }
+
+               .implementation-step {
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                    margin-bottom: 12px;
+                    padding: 8px;
+                    background: #f8f9fa;
+                    border-radius: 6px;
+                    transition: all 0.2s ease;
+               }
+
+               .implementation-step .step-number {
+                    background: #2196f3;
+                    color: white;
+                    width: 24px;
+                    height: 24px;
+                    border-radius: 50%;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: 12px;
+                    flex-shrink: 0;
+               }
+
+               .business-section p {
+                    margin: 8px 0;
+                    line-height: 1.6;
+               }
+
+               .business-section p strong {
+                    color: #1976d2;
+               }
+
+               .implementation-step:hover {
+                    background: #e9ecef;
+                    transform: translateX(5px);
+               }
+
+               .province-item:hover {
+                    background: #f8f9fa;
+                    transform: translateX(5px);
+                    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+               }
+
+               .province-item div {
+                    margin-bottom: 2px;
+               }
+
+               .back-button {
+                    background: none;
+                    border: none;
+                    color: #333;
+                    cursor: pointer;
+                    padding: 5px;
+                    display: none;
+                    align-items: center;
+                    justify-content: center;
+                    transition: all 0.2s ease;
+               }
+
+               .back-button :hover {
+                    color: red;
+               }
+
+               .back-button.visible {
+                    display: flex;
+               }
+
+               .clear-history {
+                    margin: 15px;
+                    padding: 10px;
+                    background: #ff5252;
+                    color: white;
+                    border: none;
+                    border-radius: 8px;
+                    cursor: pointer;
+                    font-size: 14px;
+                    transition: all 0.3s ease;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 8px;
+               }
+
+               .clear-history:hover {
+                    background: #ff1744;
+               }
+
+               .loading {
+                    display: none;
+                    margin-left: 10px;
+                    color: #666;
+                    animation: spin 1s linear infinite;
+               }
+
+               @media (max-width: 480px) {
+                    .business-analysis-popup {
+                         max-width: 300px;
+                         max-height: 80vh;
+                         font-size: 14px;
+                    }
+
+                    .business-section {
+                         padding: 10px;
+                    }
+
+                    .implementation-step {
+                         padding: 6px;
+                    }
+               }
+
+               @keyframes spin {
+                    0% {
+                         transform: rotate(0deg);
+                    }
+
+                    100% {
+                         transform: rotate(360deg);
+                    }
+               }
+
+               .error-popup {
+                    padding: 15px;
+                    color: #721c24;
+                    background-color: #f8d7da;
+                    border: 1px solid #f5c6cb;
+                    border-radius: 4px;
+                    margin-bottom: 10px;
+               }
+
+               .analysis-popup {
+                    font-family: 'Segoe UI', Roboto, sans-serif;
+                    padding: 15px;
+                    max-width: 400px;
+                    color: #333;
+               }
+
+               .section-card {
+                    background: white;
+                    padding: 12px;
+                    margin-bottom: 12px;
+                    border-radius: 4px;
+                    border: 1px solid #e0e0e0;
+               }
+
+               .section-title {
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    margin-bottom: 12px;
+               }
+
+               .section-title i {
+                    color: #1976d2;
+                    font-size: 20px;
+               }
+
+               .section-title h5 {
+                    margin: 0;
+                    color: #333;
+                    font-size: 16px;
+                    font-weight: 500;
+               }
+
+               .stat-container {
+                    margin-top: 10px;
+               }
+
+               .stat-item {
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                    margin-bottom: 12px;
+                    padding: 8px;
+                    border-radius: 6px;
+                    background: #f8f9fa;
+                    transition: all 0.3s ease;
+               }
+
+               .stat-item:hover {
+                    background: #f0f0f0;
+                    transform: translateX(5px);
+               }
+
+               .stat-label {
+                    display: flex;
+                    align-items: center;
+                    gap: 5px;
+                    min-width: 150px;
+                    font-size: 14px;
+                    font-weight: 500;
+                    color: #333;
+               }
+
+               .stat-bar {
+                    flex: 1;
+                    height: 8px;
+                    background: #e0e0e0;
+                    border-radius: 4px;
+                    overflow: hidden;
+               }
+
+               .stat-progress {
+                    height: 100%;
+                    background: #4caf50;
+                    border-radius: 4px;
+                    transition: all 0.3s ease;
+               }
+
+               .stat-item:hover .stat-progress {
+                    background: linear-gradient(90deg, #1976d2, #64b5f6);
+               }
+
+               .stat-value {
+                    min-width: 45px;
+                    text-align: right;
+                    font-size: 14px;
+                    font-weight: 500;
+                    color: #1976d2;
+               }
+
+               .info-icon {
+                    font-size: 16px;
+                    color: #1976d2;
+                    opacity: 0.7;
+                    cursor: help;
+               }
+
+               @media (max-width: 480px) {
+                    .analysis-popup {
+                         max-width: 300px;
+                         font-size: 12px;
+                    }
+               }
+
+               .search-in-countries {
+                    display: flex;
+                    transition: all 0.3s ease;
+               }
+
+               .search-in-countries.hidden {
+                    display: none;
+               }
+
+               /* Thêm vào phần CSS */
+               .control-button.active[id='togglePin'] {
+                    background: #ff4081;
+                    color: white;
+               }
+
+               /* Thêm hiệu ứng hover cho cursor khi ở chế độ pin */
+               #map.pin-mode {
+                    cursor: crosshair;
+               }
+
+               /* Style cho icon pin */
+               .control-button .material-icons {
+                    transform-origin: center;
+                    transition: transform 0.3s ease;
+               }
+
+               .control-button.active .material-icons {
+                    transform: rotate(-45deg);
+               }
+
+               .control-buttons {
+                    position: fixed;
+                    bottom: 20px;
+                    right: 20px;
+                    z-index: 1000;
+                    display: flex;
+                    gap: 10px;
+                    flex-direction: column;
+                    padding: 10px;
+                    border-radius: 12px;
+                    transition: all 0.3s ease;
+                    align-items: flex-end;
+               }
+
+               /* Style for individual buttons */
+               .control-button {
+                    background: white;
+                    border: none;
+                    width: 40px;
+                    height: 40px;
+                    padding: 8px;
+                    border-radius: 8px;
+                    box-shadow: 0 2px 15px rgba(0, 0, 0, 0.1);
+                    cursor: pointer;
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    transition: all 0.3s ease;
+                    font-size: 14px;
+                    color: #333;
+                    white-space: nowrap;
+                    overflow: hidden;
+                    clip-path: polygon(10px 0, calc(100% - 10px) 0, 100% 10px, 100% calc(100% - 10px), calc(100% - 10px) 100%, 10px 100%, 0 calc(100% - 10px), 0 10px);
+               }
+
+               .control-button .material-icons {
+                    font-size: 20px;
+                    min-width: 24px;
+               }
+
+               .control-button span.text {
+                    opacity: 0;
+                    width: 0;
+                    transition: all 0.3s ease;
+               }
+
+               .analyze-district-btn:hover {
+                    transform: translateY(-2px);
+                    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+               }
+
+               .section-card {
+                    background: #f8f9fa;
+                    border-radius: 8px;
+                    padding: 12px;
+               }
+
+               .analysis-popup ul li {
+                    color: #666;
+               }
+
+               .search-button,
+               .analyze-business-btn,
+               .control-button,
+               .clear-history {
+                    background: linear-gradient(135deg, #90caf9 0%, #f8bbd0 100%);
+                    color: #333;
+                    transition: all 0.3s ease;
+               }
+
+               .search-button:hover,
+               .analyze-business-btn:hover,
+               .control-button:hover,
+               .clear-history:hover {
+                    background: linear-gradient(135deg, #64b5f6 0%, #f48fb1 100%);
+                    color: #333;
+               }
+
+               .control-button.active {
+                    background: linear-gradient(135deg, #64b5f6 0%, #f48fb1 100%);
+                    color: #333;
+               }
+
+               /* When hovering over the container, expand all buttons */
+               .control-buttons:hover .control-button {
+                    width: 180px;
+                    /* Fixed width for consistency */
+                    padding: 8px 16px;
+               }
+
+               .control-buttons:hover .control-button span.text {
+                    opacity: 1;
+                    width: auto;
+               }
+
+               /* Active states */
+               .control-button#toggleAnalysis.active {
+                    background: #4caf50;
+                    color: white;
+                    width: 160px;
+               }
+
+               .control-button#togglePin.active {
+                    background: #ff4081;
+                    color: white;
+                    width: 160px;
+               }
+
+               /* Hover effect for individual buttons */
+               .control-button:hover {
+                    background: #f5f5f5;
+                    transform: translateX(-5px);
+               }
+
+               /* Active buttons hover */
+               .control-button#toggleAnalysis.active:hover {
+                    background: #45a049;
+               }
+
+               .control-button#togglePin.active:hover {
+                    background: #f50057;
+               }
+               .analysis-popup {
+                    max-height: 50vh;
+                    overflow-y: auto;
+                    padding-right: 10px;
+                    scrollbar-width: thin;
+                    scrollbar-color: #555 #f0f0f0;
+               }
+
+               .analysis-popup::-webkit-scrollbar {
+                    width: 6px;
+               }
+
+               .analysis-popup::-webkit-scrollbar-track {
+                    background: #f0f0f0;
+                    border-radius: 3px;
+               }
+
+               .analysis-popup::-webkit-scrollbar-thumb {
+                    background: #90caf9;
+                    border-radius: 3px;
+               }
+
+               .analysis-popup::-webkit-scrollbar-thumb:hover {
+                    background: #64b5f6;
+               }
+          </style>
+     </head>
+
+     <body>
+          <button class="top-left-button" id="backToInitialView">
+               <span class="material-icons">refresh</span>
+               Quay lại vị trí ban đầu
+          </button>
+
+          <div class="control-buttons">
+               <button class="control-button" id="toggleCountries">
+                    <span class="material-icons">public</span>
+                    Thông tin các nước
+               </button>
+               <button class="control-button" id="toggleHistory">
+                    <span class="material-icons">history</span>
+                    Lịch sử
+               </button>
+               <button class="control-button" id="toggleAnalysis">
+                    <span class="material-icons">analytics</span>
+                    Phân tích khu vực
+               </button>
+          </div>
+
+          <div id="history-panel" class="history-panel">
+               <div class="panel-header">
+                    <h3>Lịch sử tìm kiếm</h3>
+                    <button class="close-button" id="closeHistoryPanel">
+                         <span class="material-icons">close</span>
+                    </button>
+               </div>
+               <div id="history-list"></div>
+               <button class="clear-history" onclick="clearHistory()">
+                    <span class="material-icons">delete_sweep</span>
+                    Xóa tất cả
+               </button>
+          </div>
+
+          <div id="countries-panel" class="countries-panel">
+               <div class="panel-header">
+                    <button class="back-button" id="backButton">
+                         <span class="material-icons">arrow_back</span>
+                    </button>
+                    <h3 id="title-list">Danh sách các tỉnh</h3>
+                    <button class="close-button" id="closeCountriesPanel">
+                         <span class="material-icons">close</span>
+                    </button>
+               </div>
+               <div class="countries-list" id="countriesList"></div>
+
+               <!-- Phần tìm kiếm được di chuyển vào đây -->
+               <div class="search-container search-in-countries">
+                    <input type="text" class="search-input" id="searchInput" placeholder="Nhập địa điểm để tìm kiếm..." />
+                    <button class="search-button" onclick="searchLocation()">
+                         <span class="material-icons">search</span>
+                    </button>
+                    <span id="loading" class="loading">⌛</span>
+               </div>
+          </div>
+
+          <div id="map"></div>
+
+          <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+          <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+          <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-geometryutil/0.10.2/leaflet.geometryutil.min.js"></script>
+          <!-- <script src="./config.js">import config from './config.js';</script> -->
+          <script>
+               const config = {
+                    GEMINI_API_KEY: 'AIzaSyDOliZ2pEC5po2IvyrXElHr48k4boMg-68',
+                    GEMINI_API_URL: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent',
+                    SEARCH_HISTORY_KEY: 'mapSearchHistory',
+                    MAX_HISTORY_ITEMS: 10,
+                    BUSINESS_IDEAS_KEY: 'businessIdeasHistory',
+                    USED_INDUSTRIES_KEY: 'usedIndustriesHistory',
+               };
+               let map;
+               let searchMarker;
+               let markers = new Map();
+               let provinceData = {}; // Dữ liệu Việt Nam
+               let usData = {}; // Dữ liệu Mỹ
+               let isPinMode = false;
+               let districtsData = {};
+
+               const countries = [
+                    { name: 'Việt Nam', code: 'VN' },
+                    { name: 'Mỹ', code: 'US' },
+               ];
+
+               // Utility Functions
+               function formatLatLng(latlng) {
+                    return `${latlng.lat.toFixed(6)}, ${latlng.lng.toFixed(6)}`;
+               }
+
+               function cleanJsonText(jsonText) {
+                    return jsonText
+                         .trim()
+                         .replace(/^```json\s*/, '')
+                         .replace(/```\s*$/, '')
+                         .replace(/[\u0000-\u0019]+/g, '')
+                         .replace(/[\u201C\u201D]/g, '"')
+                         .replace(/^[\s\n]*{/, '{')
+                         .replace(/}[\s\n]*$/, '}')
+                         .replace(/\n/g, ' ')
+                         .replace(/\s+/g, ' ')
+                         .trim();
+               }
+
+               // Data Loading Functions
+               async function loadProvinceData() {
+                    try {
+                         // Load province base data
+                         const vnResponse = await fetch('provinces.csv');
+                         const vnText = await vnResponse.text();
+                         provinceData = parseCSV(vnText);
+
+                         // Load GRDP data
+                         const grdpResponse = await fetch('ket_qua_1.csv');
+                         const grdpText = await grdpResponse.text();
+                         const grdpData = parseGRDPData(grdpText);
+
+                         // Merge GRDP data into province data
+                         for (let provinceName in provinceData) {
+                              if (grdpData[provinceName]) {
+                                   provinceData[provinceName].grdp = grdpData[provinceName];
+                              }
+                         }
+
+                         // Load US data (keeping existing US data loading)
+                         const usResponse = await fetch('US.csv');
+                         const usText = await usResponse.text();
+                         usData = parseUSCSV(usText);
+
+                         // Enable the countries button after data is loaded
+                         document.getElementById('toggleCountries').disabled = false;
+                         document.getElementById('toggleCountries').title = '';
+                    } catch (error) {
+                         console.error('Error loading data:', error);
+                         alert('Không thể tải dữ liệu. Vui lòng kiểm tra các file CSV.');
+                    }
+               }
+
+               function parseGRDPData(csvText) {
+                    const lines = csvText.trim().split('\n');
+                    const grdpData = {};
+
+                    // Skip header row
+                    for (let i = 1; i < lines.length; i++) {
+                         const line = lines[i].trim();
+                         if (!line) continue;
+
+                         // Split by comma but handle quoted values properly
+                         let [provinceName, grdpValue] = line.split(',').map((val) => val.trim().replace(/^"|"$/g, ''));
+
+                         // Clean up GRDP value
+                         grdpValue = parseFloat(grdpValue.replace(',', '.'));
+
+                         if (!isNaN(grdpValue)) {
+                              grdpData[provinceName] = grdpValue;
+                         }
+                    }
+
+                    return grdpData;
+               }
+
+               // Hàm lưu ngành đã sử dụng
+               function saveUsedIndustry(locationName, industry) {
+                    const history = getUsedIndustries();
+                    if (!history[locationName]) {
+                         history[locationName] = [];
+                    }
+                    history[locationName].push(industry);
+                    localStorage.setItem(config.USED_INDUSTRIES_KEY, JSON.stringify(history));
+               }
+
+               // Hàm lấy lịch sử ngành đã sử dụng
+               function getUsedIndustries() {
+                    const history = localStorage.getItem(config.USED_INDUSTRIES_KEY);
+                    return history ? JSON.parse(history) : {};
+               }
+
+               function organizeDistrictsByProvince(csvData) {
+                    const districts = {};
+                    const lines = csvData.trim().split('\n');
+
+                    // Bỏ qua dòng header
+                    for (let i = 1; i < lines.length; i++) {
+                         const line = lines[i].trim();
+                         if (!line) continue;
+
+                         const parts = line.split(',');
+                         const districtName = parts[0].trim();
+                         const provinceName = parts[1].trim();
+                         const lat = parseFloat(parts[2]);
+                         const lng = parseFloat(parts[3]);
+
+                         if (provinceName) {
+                              if (!districts[provinceName]) {
+                                   districts[provinceName] = [];
+                              }
+                              districts[provinceName].push({
+                                   name: districtName,
+                                   coordinates: [lat, lng],
+                              });
+                         }
+                    }
+                    return districts;
+               }
+
+               function parseCSV(csvText) {
+                    const lines = csvText.trim().split('\n');
+                    const provinces = {};
+
+                    // Bỏ qua dòng header
+                    for (let i = 1; i < lines.length; i++) {
+                         const line = lines[i].trim();
+                         if (!line) continue;
+
+                         const values = line.split('","').map((val) => val.replace(/^"|"$/g, ''));
+                         if (values.length < 6) continue;
+
+                         const provinceName = values[0].trim();
+                         const lat = parseFloat(values[1]);
+                         const lng = parseFloat(values[2]);
+                         const population = parseInt(values[3].replace(/\./g, ''));
+                         const area = parseFloat(values[4]);
+                         const density = parseFloat(values[5]);
+                         const income = parseFloat(values[6]);
+
+                         if (!isNaN(lat) && !isNaN(lng)) {
+                              provinces[provinceName] = {
+                                   coordinates: [lat, lng],
+                                   population: population,
+                                   area: area,
+                                   density: density,
+                                   income: income,
+                                   sectors: [
+                                        values[7], // Ngành 1
+                                        values[8], // Ngành 2
+                                        values[9], // Ngành 3
+                                        values[10], // Ngành 4
+                                        values[11], // Ngành 5
+                                   ].filter(Boolean),
+                                   trends: [
+                                        values[12], // Xu hướng chính 1
+                                        values[13], // Xu hướng chính 2
+                                   ].filter(Boolean),
+                                   opportunities: values[14],
+                                   challenges: values[15],
+                              };
+                         }
+                    }
+
+                    return provinces;
+               }
+
+               function parseUSCSV(csvText) {
+                    const lines = csvText.trim().split('\n');
+                    const states = {};
+
+                    // Skip header row
+                    for (let i = 1; i < lines.length; i++) {
+                         try {
+                              const line = lines[i].trim();
+                              if (!line) continue;
+
+                              // Split by comma but respect quotes
+                              const values = line.match(/("([^"]|"")*"|[^,]+)/g).map((val) => val.replace(/^"|"$/g, '').trim());
+
+                              const stateName = values[0];
+                              const lat = parseFloat(values[1]);
+                              const lng = parseFloat(values[2]);
+
+                              // Parse numeric values
+                              const population = parseInt(values[3].replace(/,/g, ''));
+                              const area = parseFloat(values[4].replace(/,/g, ''));
+                              const density = parseFloat(values[5].replace(/,/g, ''));
+                              const income = parseFloat(values[6].replace(/,/g, ''));
+
+                              if (!isNaN(lat) && !isNaN(lng)) {
+                                   states[stateName] = {
+                                        coordinates: [lat, lng],
+                                        population: population,
+                                        area: area,
+                                        density: density,
+                                        income: income,
+                                        sectors: [
+                                             values[7], // Ngành 1
+                                             values[8], // Ngành 2
+                                             values[9], // Ngành 3
+                                             values[10], // Ngành 4
+                                             values[11], // Ngành 5
+                                        ].filter(Boolean), // Remove empty values
+                                        trends: [
+                                             values[12], // Xu hướng chính 1
+                                             values[13], // Xu hướng chính 2
+                                        ].filter(Boolean),
+                                        opportunities: values[14] || '',
+                                        challenges: values[15] || '',
+                                   };
+                              }
+                         } catch (error) {
+                              console.error(`Error parsing line ${i}:`, error);
+                              continue;
+                         }
+                    }
+
+                    return states;
+               }
+
+               function saveBusinessIdea(locationData, idea) {
+                    let history = getBusinessIdeasHistory();
+                    const newIdea = {
+                         id: Date.now(),
+                         timestamp: new Date().toISOString(),
+                         location: {
+                              name: locationData.name,
+                              lat: locationData.lat,
+                              lng: locationData.lng,
+                              type: locationData.type,
+                         },
+                         idea: idea,
+                    };
+
+                    history.unshift(newIdea);
+                    localStorage.setItem(config.BUSINESS_IDEAS_KEY, JSON.stringify(history));
+                    return newIdea.id;
+               }
+
+               function getBusinessIdeasHistory() {
+                    const history = localStorage.getItem(config.BUSINESS_IDEAS_KEY);
+                    return history ? JSON.parse(history) : [];
+               }
+
+               function addPinControl() {
+                    const controlButtons = document.querySelector('.control-buttons');
+                    const pinButton = document.createElement('button');
+                    pinButton.className = 'control-button';
+                    pinButton.id = 'togglePin';
+                    pinButton.innerHTML = `
+        <span class="material-icons">push_pin</span>
+        Ghim vị trí
+    `;
+                    controlButtons.insertBefore(pinButton, controlButtons.firstChild);
+
+                    // Thêm xử lý sự kiện cho nút Pin
+                    pinButton.addEventListener('click', function () {
+                         isPinMode = !isPinMode;
+                         this.classList.toggle('active');
+
+                         if (isPinMode) {
+                              map.getContainer().style.cursor = 'crosshair';
+                         } else {
+                              map.getContainer().style.cursor = '';
+                         }
+                    });
+
+                    // Thêm xử lý sự kiện click trên map
+                    map.on('click', async function (e) {
+                         if (!isPinMode) return;
+
+                         try {
+                              const lat = e.latlng.lat;
+                              const lng = e.latlng.lng;
+
+                              // Hiển thị loading popup
+                              const loadingPopup = L.popup().setLatLng(e.latlng).setContent('<div style="text-align: center; padding: 20px;">Đang phân tích địa điểm...</div>').openOn(map);
+
+                              // Lấy thông tin địa điểm từ tọa độ
+                              const locationInfo = await getLocationInfo(lat, lng);
+
+                              // Phân tích địa điểm
+                              const locationData = await analyzeLocation(locationInfo, lat, lng);
+
+                              // Tạo marker và popup
+                              if (searchMarker) {
+                                   map.removeLayer(searchMarker);
+                              }
+
+                              const popupContent = createSearchResultPopup(locationData);
+                              searchMarker = L.marker([lat, lng], {
+                                   title: locationData.name,
+                              })
+                                   .bindPopup(popupContent)
+                                   .addTo(map);
+
+                              // Lưu vào lịch sử
+                              saveSearchPoint(locationData);
+
+                              // Đóng loading popup và mở popup kết quả
+                              map.closePopup(loadingPopup);
+                              searchMarker.openPopup();
+
+                              // Tắt chế độ pin sau khi hoàn thành
+                              isPinMode = false;
+                              document.getElementById('togglePin').classList.remove('active');
+                              map.getContainer().style.cursor = '';
+                         } catch (error) {
+                              console.error('Pin location error:', error);
+                              map.closePopup();
+                              alert('Có lỗi xảy ra khi phân tích vị trí: ' + error.message);
+
+                              // Tắt chế độ pin nếu có lỗi
+                              isPinMode = false;
+                              document.getElementById('togglePin').classList.remove('active');
+                              map.getContainer().style.cursor = '';
+                         }
+                    });
+               }
+
+               async function analyzeLocation(locationInfo, lat, lng) {
+                    const prompt = `Hãy phân tích địa điểm "${locationInfo.name}" tại vị trí (${lat}, ${lng}).
+    Chỉ trả về theo định dạng JSON sau, không thêm text nào khác:
+    {
+        "name": "${locationInfo.name}",
+        "lat": ${lat},
+        "lng": ${lng},
+        "type": "${locationInfo.type}",
+        "sectors": [
+            {
+                "name": "tên ngành",
+                "percentage": số_phần_trăm,
+                "description": "mô tả ngắn về đặc điểm và vai trò của ngành này tại khu vực"
+            }
+        ],
+        "analysis": {
+            "strengths": "điểm mạnh của khu vực",
+            "weaknesses": "điểm yếu cần cải thiện",
+            "challenges": "khó khăn cần giải quyết", 
+            "requirements": "kiến thức và kỹ năng cần có"
+        }
+    }`;
+
+                    try {
+                         const response = await fetch(`${config.GEMINI_API_URL}?key=${config.GEMINI_API_KEY}`, {
+                              method: 'POST',
+                              headers: {
+                                   'Content-Type': 'application/json',
+                              },
+                              body: JSON.stringify({
+                                   contents: [
+                                        {
+                                             parts: [
+                                                  {
+                                                       text: prompt,
+                                                  },
+                                             ],
+                                        },
+                                   ],
+                                   generationConfig: {
+                                        temperature: 0.1,
+                                        topP: 1,
+                                        topK: 1,
+                                   },
+                              }),
+                         });
+
+                         const data = await response.json();
+
+                         if (!data.candidates || !data.candidates[0]?.content?.parts[0]?.text) {
+                              throw new Error('Không nhận được dữ liệu phân tích từ API');
+                         }
+
+                         let jsonText = data.candidates[0].content.parts[0].text;
+                         jsonText = cleanJsonText(jsonText);
+
+                         let locationData = JSON.parse(jsonText);
+                         validateLocationData(locationData);
+
+                         // Đảm bảo giữ nguyên tọa độ
+                         locationData.lat = lat;
+                         locationData.lng = lng;
+
+                         return locationData;
+                    } catch (error) {
+                         console.error('Analyze location error:', error);
+                         throw new Error('Không thể phân tích địa điểm');
+                    }
+               }
+
+               // Xóa một ý tưởng
+               function deleteBusinessIdea(ideaId) {
+                    let history = getBusinessIdeasHistory();
+                    history = history.filter((item) => item.id !== ideaId);
+                    localStorage.setItem(config.BUSINESS_IDEAS_KEY, JSON.stringify(history));
+               }
+
+               // Hàm lấy thông tin địa điểm từ tọa độ
+               async function getLocationInfo(lat, lng) {
+                    try {
+                         const response = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&accept-language=vi`);
+
+                         if (!response.ok) {
+                              throw new Error('Không thể lấy thông tin địa điểm');
+                         }
+
+                         const data = await response.json();
+
+                         // Xử lý thông tin địa điểm
+                         const address = data.address;
+                         const components = [];
+
+                         // Ưu tiên các thành phần địa chỉ theo thứ tự
+                         if (address.quarter) components.push(address.quarter);
+                         if (address.suburb) components.push(address.suburb);
+                         if (address.city_district) components.push(address.city_district);
+                         if (address.city) components.push(address.city);
+                         if (address.state) components.push(address.state);
+                         if (address.country) components.push(address.country);
+
+                         return {
+                              name: components.join(', ') || 'Vị trí đã chọn',
+                              type: determineLocationType(address),
+                              raw: data,
+                         };
+                    } catch (error) {
+                         console.error('Get location info error:', error);
+                         return {
+                              name: 'Vị trí đã chọn',
+                              type: 'địa danh',
+                              raw: null,
+                         };
+                    }
+               }
+
+               // Hàm xác định loại địa điểm
+               function determineLocationType(address) {
+                    if (address.city) return 'thành phố';
+                    if (address.state) return 'tỉnh';
+                    if (address.suburb || address.quarter) return 'khu vực';
+                    return 'địa danh';
+               }
+
+               // Tạo prompt mới có tham khảo ý tưởng cũ
+
+               function createBusinessPrompt(locationData, isVietnam) {
+                    if (!locationData || !locationData.lat || !locationData.lng) {
+                         throw new Error('Thiếu thông tin tọa độ địa điểm');
+                    }
+
+                    // Danh sách tất cả các ngành có thể
+                    const allIndustries = [
+                         'Công nghệ sinh học và y tế',
+                         'Năng lượng tái tạo',
+                         'Giáo dục và đào tạo',
+                         'Nông nghiệp thông minh',
+                         'Thương mại điện tử',
+                         'Logistics và vận tải',
+                         'Công nghiệp sản xuất',
+                         'Du lịch và giải trí',
+                         'Dịch vụ tài chính',
+                         'Bất động sản',
+                         'Công nghệ thông tin',
+                         'Y tế và chăm sóc sức khỏe',
+                         'Môi trường và tái chế',
+                         'Thực phẩm và đồ uống',
+                         'Xây dựng và vật liệu',
+                    ];
+
+                    // Lấy danh sách ngành đã sử dụng cho địa điểm này
+                    const usedIndustries = getUsedIndustries()[locationData.name] || [];
+
+                    // Lọc ra các ngành chưa được sử dụng
+                    const availableIndustries = allIndustries.filter((industry) => !usedIndustries.includes(industry));
+
+                    if (availableIndustries.length === 0) {
+                         // Nếu đã sử dụng hết tất cả các ngành, reset lại
+                         delete getUsedIndustries()[locationData.name];
+                         localStorage.setItem(config.USED_INDUSTRIES_KEY, JSON.stringify(getUsedIndustries()));
+                         return createBusinessPrompt(locationData, isVietnam); // Gọi lại hàm
+                    }
+
+                    // Chọn ngẫu nhiên một ngành chưa sử dụng
+                    const selectedIndustry = availableIndustries[Math.floor(Math.random() * availableIndustries.length)];
+
+                    // Lưu ngành đã chọn vào lịch sử
+                    saveUsedIndustry(locationData.name, selectedIndustry);
+
+                    // Lấy các ý tưởng đã có để tránh trùng lặp
+                    const previousIdeas = getBusinessIdeasHistory()
+                         .filter((item) => item.location && item.location.name === locationData.name)
+                         .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+                    let previousIdeasText = '';
+                    if (previousIdeas.length > 0) {
+                         previousIdeasText = `
+        CÁC Ý TƯỞNG ĐÃ TỒN TẠI (TUYỆT ĐỐI TRÁNH TRÙNG LẶP):
+        ${previousIdeas
+             .map(
+                  (item, index) => `
+            ${index + 1}. ${item.idea.businessIdea.name}
+            - Mô tả: ${item.idea.businessIdea.description}
+            - Đối tượng: ${item.idea.businessIdea.businessModel.targetCustomer}
+        `,
+             )
+             .join('\n')}
+        `;
+                    }
+
+                    return `Hãy đề xuất một ý tưởng kinh doanh cho ${locationData.name} trong lĩnh vực ${selectedIndustry}.
+
+    THÔNG TIN KHU VỰC:
+    - Dân số: ${locationData.population ? locationData.population.toLocaleString() : 'N/A'} người
+    - Thu nhập: ${locationData.income || 'N/A'} ${isVietnam ? 'triệu đồng/tháng' : 'USD/năm'}
+    - Ngành chính: ${Array.isArray(locationData.sectors) ? locationData.sectors.join(', ') : 'N/A'}
+    - Xu hướng: ${Array.isArray(locationData.trends) ? locationData.trends.join(', ') : 'N/A'}
+
+    ${previousIdeasText}
+
+    YÊU CẦU NGHIÊM NGẶT:
+    1. Ý tưởng PHẢI thuộc lĩnh vực: ${selectedIndustry}
+    2. TUYỆT ĐỐI KHÔNG ĐƯỢC có bất kỳ sự trùng lặp nào với các ý tưởng cũ
+    3. Phải mang tính đột phá và sáng tạo trong lĩnh vực được chỉ định
+    4. Phải phù hợp với đặc điểm địa phương và xu hướng phát triển
+    
+    Trả về kết quả theo định dạng JSON:
+    {
+        "businessIdea": {
+            "name": "Tên ý tưởng (phải bắt đầu bằng: ${selectedIndustry})",
+            "description": "Mô tả chi tiết về ý tưởng",
+            "businessModel": {
+                "overview": "Tổng quan về mô hình kinh doanh",
+                "targetCustomer": "Đối tượng khách hàng mục tiêu",
+                "valueProposition": "Giá trị độc đáo mang lại cho khách hàng",
+                "revenueStreams": "Các nguồn thu chính"
+            },
+            "challenges": [
+                {
+                    "challenge": "Thách thức cụ thể",
+                    "solution": "Giải pháp chi tiết"
+                }
+            ],
+            "implementationSteps": [
+                "Các bước triển khai cụ thể"
+            ]
+        }
+    }`;
+               }
+
+               // Hàm hỗ trợ phân tích ý tưởng
+               function extractMainCategory(name) {
+                    // Rút trích lĩnh vực chính từ tên ý tưởng
+                    const categories = ['dịch vụ', 'sản xuất', 'thương mại', 'du lịch', 'công nghệ', 'giáo dục', 'y tế', 'nông nghiệp'];
+                    return categories.find((cat) => name.toLowerCase().includes(cat)) || 'khác';
+               }
+
+               function extractKeywords(text) {
+                    // Rút trích từ khóa quan trọng từ mô tả
+                    const words = text.toLowerCase().split(' ');
+                    return [...new Set(words.filter((w) => w.length > 5))].slice(0, 5);
+               }
+
+               function identifyBusinessType(description) {
+                    // Xác định loại hình kinh doanh
+                    const types = ['B2C', 'B2B', 'C2C', 'dịch vụ', 'sản xuất', 'thương mại'];
+                    return types.find((type) => description.toLowerCase().includes(type)) || 'khác';
+               }
+
+               // GeminiAnalysisService
+               const GeminiAnalysisService = {
+                    API_KEY: config.GEMINI_API_KEY,
+                    API_ENDPOINT: config.GEMINI_API_URL,
+
+                    async analyzeRegion(location, area) {
+                         if (!location || !Array.isArray(location) || location.length !== 2) {
+                              throw new Error('Vị trí không hợp lệ');
+                         }
+
+                         if (!area || isNaN(area) || area <= 0) {
+                              throw new Error('Diện tích không hợp lệ');
+                         }
+
+                         const prompt = `Analyze this area in Vietnam and provide detailed statistics in the exact JSON format:
+                Location: ${location[0]}, ${location[1]}
+                Area Size: ${area} square kilometers
+
+                Required response format (numbers should be reasonable for Vietnam):
+                {
+                    "demographics": {
+                        "density": "",
+                        "ageGroups": {
+                            "under18": "",
+                            "age1834": "",
+                            "age3559": "",
+                            "above60": ""
+                        }
+                    },
+                    "economics": {
+                        "averageIncome": "",
+                        "expenditure": {
+                            "housing": "",
+                            "food": "",
+                            "education": "",
+                            "entertainment": "",
+                            "others": ""
+                        }
+                    },
+                    "trends": {
+                        "consumption": {
+                            "foodBeverage": "",
+                            "housing": "",
+                            "transportation": "",
+                            "healthcare": "",
+                            "education": "",
+                            "other": ""
+                        },
+                        "production": {
+                            "agriculture": "",
+                            "manufacturing": "",
+                            "services": "",
+                            "construction": ""
+                        }
+                    }
+                }`;
+
+                         try {
+                              const response = await fetch(`${this.API_ENDPOINT}?key=${this.API_KEY}`, {
+                                   method: 'POST',
+                                   headers: {
+                                        'Content-Type': 'application/json',
+                                   },
+                                   body: JSON.stringify({
+                                        contents: [
+                                             {
+                                                  parts: [
+                                                       {
+                                                            text: prompt,
+                                                       },
+                                                  ],
+                                             },
+                                        ],
+                                        generationConfig: {
+                                             temperature: 0.2,
+                                             topK: 40,
+                                             topP: 0.95,
+                                             maxOutputTokens: 1024,
+                                        },
+                                   }),
+                              });
+
+                              if (!response.ok) {
+                                   throw new Error(`API error: ${response.status}`);
+                              }
+
+                              const result = await response.json();
+
+                              if (!result.candidates || !result.candidates[0]?.content?.parts[0]?.text) {
+                                   throw new Error('Không nhận được dữ liệu phân tích hợp lệ');
+                              }
+
+                              return this.parseResponse(result.candidates[0].content.parts[0].text);
+                         } catch (error) {
+                              console.error('Analysis service error:', error);
+                              throw new Error('Không thể kết nối đến dịch vụ phân tích. Vui lòng thử lại sau.');
+                         }
+                    },
+
+                    parseResponse(response) {
+                         try {
+                              const cleanedResponse = response.replace(/```json\s*|\s*```/g, '').trim();
+                              const jsonMatch = cleanedResponse.match(/\{[\s\S]*\}/);
+
+                              if (!jsonMatch) {
+                                   throw new Error('Không tìm thấy dữ liệu JSON trong phản hồi');
+                              }
+
+                              const parsedResponse = JSON.parse(jsonMatch[0]);
+                              this.validateAnalysisData(parsedResponse);
+                              return parsedResponse;
+                         } catch (error) {
+                              console.error('Response parsing error:', error);
+                              throw new Error('Lỗi xử lý dữ liệu phân tích');
+                         }
+                    },
+
+                    validateAnalysisData(data) {
+                         const required = {
+                              demographics: ['density', 'ageGroups'],
+                              ageGroups: ['under18', 'age1834', 'age3559', 'above60'],
+                              economics: ['averageIncome', 'expenditure'],
+                              expenditure: ['housing', 'food', 'education', 'entertainment', 'others'],
+                              trends: ['consumption', 'production'],
+                         };
+
+                         if (!data.demographics || !data.economics || !data.trends) {
+                              throw new Error('Thiếu thông tin phân tích cơ bản');
+                         }
+
+                         if (!this.validateSection(data.demographics, required.demographics)) {
+                              throw new Error('Dữ liệu dân số không hợp lệ');
+                         }
+
+                         if (!this.validateSection(data.demographics.ageGroups, required.ageGroups)) {
+                              throw new Error('Dữ liệu nhóm tuổi không hợp lệ');
+                         }
+
+                         if (!this.validateSection(data.economics, required.economics)) {
+                              throw new Error('Dữ liệu kinh tế không hợp lệ');
+                         }
+
+                         if (!this.validateSection(data.economics.expenditure, required.expenditure)) {
+                              throw new Error('Dữ liệu chi tiêu không hợp lệ');
+                         }
+
+                         return true;
+                    },
+
+                    validateSection(section, requiredFields) {
+                         return requiredFields.every((field) => {
+                              return section.hasOwnProperty(field) && section[field] !== null && section[field] !== undefined;
+                         });
+                    },
+               };
+
+               // AreaAnalysis Object
+               const AreaAnalysis = {
+                    drawnItems: null,
+                    isAnalysisMode: false,
+                    map: null,
+                    drawControl: null,
+                    currentLayer: null,
+
+                    initialize(map) {
+                         this.map = map;
+                         this.drawnItems = new L.FeatureGroup();
+                         this.map.addLayer(this.drawnItems);
+                         this.initializeDrawControl();
+                         this.initializeAnalysisMode();
+                    },
+
+                    initializeDrawControl() {
+                         this.drawControl = new L.Control.Draw({
+                              draw: {
+                                   rectangle: {
+                                        shapeOptions: {
+                                             color: '#4CAF50',
+                                             weight: 2,
+                                        },
+                                        metric: true,
+                                        showArea: true,
+                                   },
+                                   polygon: false,
+                                   polyline: false,
+                                   circle: false,
+                                   marker: false,
+                                   circlemarker: false,
+                              },
+                              edit: {
+                                   featureGroup: this.drawnItems,
+                                   remove: true,
+                              },
+                         });
+                    },
+
+                    async getLocationName(center) {
+                         try {
+                              const response = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${center.lat}&lon=${center.lng}&format=json&accept-language=vi`);
+
+                              if (!response.ok) {
+                                   throw new Error('Không thể lấy thông tin địa điểm');
+                              }
+
+                              const data = await response.json();
+                              const address = data.address;
+                              const components = [];
+
+                              if (address.quarter) components.push(address.quarter);
+                              if (address.suburb) components.push(address.suburb);
+                              if (address.city_district) components.push(address.city_district);
+                              if (address.city) components.push(address.city);
+                              if (address.state) components.push(address.state);
+
+                              return components.join(', ') || 'Khu vực chưa xác định';
+                         } catch (error) {
+                              console.error('Lỗi lấy tên địa điểm:', error);
+                              return 'Khu vực chưa xác định';
+                         }
+                    },
+
+                    initializeAnalysisMode() {
+                         this.map.on('draw:created', async (e) => {
+                              const layer = e.layer;
+                              this.drawnItems.addLayer(layer);
+                              this.currentLayer = layer;
+
+                              if (this.isAnalysisMode && e.layerType === 'rectangle') {
+                                   try {
+                                        const bounds = layer.getBounds();
+                                        const center = bounds.getCenter();
+                                        const area = this.calculateRectangleArea(bounds);
+
+                                        const loadingPopup = L.popup().setLatLng(center).setContent('<div class="loading">Đang phân tích...</div>').openOn(this.map);
+
+                                        const locationName = await this.getLocationName(center);
+
+                                        const analysisResult = await GeminiAnalysisService.analyzeRegion([center.lat, center.lng], area / 1000000);
+
+                                        this.map.closePopup(loadingPopup);
+
+                                        const popupContent = this.createAnalysisPopup(analysisResult, area, bounds, locationName);
+
+                                        layer.bindPopup(popupContent, {
+                                             maxWidth: 400,
+                                             className: 'analysis-popup-container',
+                                        }).openPopup();
+                                   } catch (error) {
+                                        console.error('Analysis error:', error);
+                                        layer.bindPopup(`<div class="error-popup">Lỗi phân tích khu vực: ${error.message}</div>`).openPopup();
+                                   }
+                              }
+                         });
+                    },
+
+                    calculateRectangleArea(bounds) {
+                         const northWest = bounds.getNorthWest();
+                         const northEast = bounds.getNorthEast();
+                         const southEast = bounds.getSouthEast();
+                         const southWest = bounds.getSouthWest();
+
+                         return L.GeometryUtil.geodesicArea([northWest, northEast, southEast, southWest]);
+                    },
+
+                    createAnalysisPopup(analysis, area, bounds, locationName) {
+                         const center = bounds.getCenter();
+
+                         return `
+                <div class="analysis-popup">
+                    <h4>Thông tin khu vực phân tích</h4>
+                    <div class="analysis-popup-content">
+                        <div class="info-section">
+                            <div class="info-section-title">
+                                <i class="material-icons">location_on</i>
+                                <h5>Địa điểm</h5>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-value" style="padding: 8px 0; font-weight: 500;">
+                                    ${locationName}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="info-section">
+                            <div class="info-section-title">
+                                <i class="material-icons">place</i>
+                                <h5>Vị trí và diện tích</h5>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label">Điểm trung tâm</div>
+                                <div class="info-value">${formatLatLng(center)}</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label">Diện tích</div>
+                                <div class="info-value">${(area / 1000000).toFixed(2)} km²</div>
+                            </div>
+                            <div class="coordinate-details">
+                                <div class="info-label">Tọa độ các góc:</div>
+                                <div class="coordinate-grid">
+                                    <div class="coordinate-item">
+                                        <span>Tây Bắc:</span>
+                                        <span>${formatLatLng(bounds.getNorthWest())}</span>
+                                    </div>
+                                    <div class="coordinate-item">
+                                        <span>Đông Bắc:</span>
+                                        <span>${formatLatLng(bounds.getNorthEast())}</span>
+                                    </div>
+                                    <div class="coordinate-item">
+                                        <span>Đông Nam:</span>
+                                        <span>${formatLatLng(bounds.getSouthEast())}</span>
+                                    </div>
+                                    <div class="coordinate-item">
+                                        <span>Tây Nam:</span>
+                                        <span>${formatLatLng(bounds.getSouthWest())}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="info-section">
+                            <div class="info-section-title">
+                                <i class="material-icons">groups</i>
+                                <h5>Dân số</h5>
+                            </div>
+                            <div class="stat-item" title="Mật độ dân số trên km²">
+                                <div class="stat-label">
+                                    <i class="material-icons">person</i>
+                                    Mật độ
+                                </div>
+                                <div class="stat-bar">
+                                    <div class="stat-progress" style="width: ${((analysis.demographics.density / 5000) * 100).toFixed(1)}%"></div>
+                                </div>
+                                <div class="stat-value">${analysis.demographics.density}/km²</div>
+                            </div>
+                            
+                            <div class="age-distribution">
+                                <div class="info-label">Phân bố độ tuổi:</div>
+                                <div class="stat-item">
+                                    <div class="stat-label">Dưới 18</div>
+                                    <div class="stat-bar">
+                                        <div class="stat-progress" style="width: ${analysis.demographics.ageGroups.under18}%"></div>
+                                    </div>
+                                    <div class="stat-value">${analysis.demographics.ageGroups.under18}%</div>
+                                </div>
+                                <div class="stat-item">
+                                    <div class="stat-label">18-34</div>
+                                    <div class="stat-bar">
+                                        <div class="stat-progress" style="width: ${analysis.demographics.ageGroups.age1834}%"></div>
+                                    </div>
+                                    <div class="stat-value">${analysis.demographics.ageGroups.age1834}%</div>
+                                </div>
+                                <div class="stat-item">
+                                    <div class="stat-label">35-59</div>
+                                    <div class="stat-bar">
+                                        <div class="stat-progress" style="width: ${analysis.demographics.ageGroups.age3559}%"></div>
+                                    </div>
+                                    <div class="stat-value">${analysis.demographics.ageGroups.age3559}%</div>
+                                </div>
+                                <div class="stat-item">
+                                    <div class="stat-label">Trên 60</div>
+                                    <div class="stat-bar">
+                                        <div class="stat-progress" style="width: ${analysis.demographics.ageGroups.above60}%"></div>
+                                    </div>
+                                    <div class="stat-value">${analysis.demographics.ageGroups.above60}%</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="info-section">
+                            <div class="info-section-title">
+                                <i class="material-icons">monetization_on</i>
+                                <h5>Kinh tế</h5>
+                            </div>
+                            <div class="income-info">
+                                <div class="info-item highlight-item">
+                                    <div class="info-label">Thu nhập trung bình hàng tháng</div>
+                                    <div class="info-value highlight-value">
+                                        ${analysis.economics.averageIncome.toLocaleString()} VNĐ
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="expenditure-stats">
+                                <div class="info-label">Tỷ lệ chi tiêu:</div>
+                                <div class="stat-item">
+                                    <div class="stat-label">Nhà ở</div>
+                                    <div class="stat-bar">
+                                        <div class="stat-progress" style="width: ${analysis.economics.expenditure.housing}%"></div>
+                                    </div>
+                                    <div class="stat-value">${analysis.economics.expenditure.housing}%</div>
+                                </div>
+                                <div class="stat-item">
+                                    <div class="stat-label">Thực phẩm</div>
+                                    <div class="stat-bar">
+                                        <div class="stat-progress" style="width: ${analysis.economics.expenditure.food}%"></div>
+                                    </div>
+                                    <div class="stat-value">${analysis.economics.expenditure.food}%</div>
+                                </div>
+                                <div class="stat-item">
+                                    <div class="stat-label">Giáo dục</div>
+                                    <div class="stat-bar">
+                                        <div class="stat-progress" style="width: ${analysis.economics.expenditure.education}%"></div>
+                                    </div>
+                                    <div class="stat-value">${analysis.economics.expenditure.education}%</div>
+                                </div>
+                                <div class="stat-item">
+                                    <div class="stat-label">Giải trí</div>
+                                    <div class="stat-bar">
+                                        <div class="stat-progress" style="width: ${analysis.economics.expenditure.entertainment}%"></div>
+                                    </div>
+                                    <div class="stat-value">${analysis.economics.expenditure.entertainment}%</div>
+                                </div>
+                                <div class="stat-item">
+                                    <div class="stat-label">Khác</div>
+                                    <div class="stat-bar">
+                                        <div class="stat-progress" style="width: ${analysis.economics.expenditure.others}%"></div>
+                                    </div>
+                                    <div class="stat-value">${analysis.economics.expenditure.others}%</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="info-section">
+                            <div class="info-section-title">
+                                <i class="material-icons">trending_up</i>
+                                <h5>Xu hướng</h5>
+                            </div>
+                            
+                            <div class="trend-section">
+                                <div class="info-label">Tiêu dùng chính:</div>
+                                <div class="stat-item">
+                                    <div class="stat-label">Thực phẩm & Đồ uống</div>
+                                    <div class="stat-bar">
+                                        <div class="stat-progress" style="width: ${analysis.trends.consumption.foodBeverage}%"></div>
+                                    </div>
+                                    <div class="stat-value">${analysis.trends.consumption.foodBeverage}%</div>
+                                </div>
+                                <div class="stat-item">
+                                    <div class="stat-label">Nhà ở</div>
+                                    <div class="stat-bar">
+                                        <div class="stat-progress" style="width: ${analysis.trends.consumption.housing}%"></div>
+                                    </div>
+                                    <div class="stat-value">${analysis.trends.consumption.housing}%</div>
+                                </div>
+                                <div class="stat-item">
+                                    <div class="stat-label">Giao thông</div>
+                                    <div class="stat-bar">
+                                        <div class="stat-progress" style="width: ${analysis.trends.consumption.transportation}%"></div>
+                                    </div>
+                                    <div class="stat-value">${analysis.trends.consumption.transportation}%</div>
+                                </div>
+                                <div class="stat-item">
+                                    <div class="stat-label">Y tế</div>
+                                    <div class="stat-bar">
+                                        <div class="stat-progress" style="width: ${analysis.trends.consumption.healthcare}%"></div>
+                                    </div>
+                                    <div class="stat-value">${analysis.trends.consumption.healthcare}%</div>
+                                </div>
+                                <div class="stat-item">
+                                    <div class="stat-label">Giáo dục</div>
+                                    <div class="stat-bar">
+                                        <div class="stat-progress" style="width: ${analysis.trends.consumption.education}%"></div>
+                                    </div>
+                                    <div class="stat-value">${analysis.trends.consumption.education}%</div>
+                                </div>
+                                <div class="stat-item">
+                                    <div class="stat-label">Khác</div>
+                                    <div class="stat-bar">
+                                        <div class="stat-progress" style="width: ${analysis.trends.consumption.other}%"></div>
+                                    </div>
+                                    <div class="stat-value">${analysis.trends.consumption.other}%</div>
+                                </div>
+                            </div>
+
+                            <div class="trend-section">
+                                <div class="info-label">Sản xuất chính:</div>
+                                <div class="stat-item">
+                                    <div class="stat-label">Nông nghiệp</div>
+                                    <div class="stat-bar">
+                                        <div class="stat-progress" style="width: ${analysis.trends.production.agriculture}%"></div>
+                                    </div>
+                                    <div class="stat-value">${analysis.trends.production.agriculture}%</div>
+                                </div>
+                                <div class="stat-item">
+                                    <div class="stat-label">Sản xuất</div>
+                                    <div class="stat-bar">
+                                        <div class="stat-progress" style="width: ${analysis.trends.production.manufacturing}%"></div>
+                                    </div>
+                                    <div class="stat-value">${analysis.trends.production.manufacturing}%</div>
+                                </div>
+                                <div class="stat-item">
+                                    <div class="stat-label">Dịch vụ</div>
+                                    <div class="stat-bar">
+                                        <div class="stat-progress" style="width: ${analysis.trends.production.services}%"></div>
+                                    </div>
+                                    <div class="stat-value">${analysis.trends.production.services}%</div>
+                                </div>
+                                <div class="stat-item">
+                                    <div class="stat-label">Xây dựng</div>
+                                    <div class="stat-bar">
+                                        <div class="stat-progress" style="width: ${analysis.trends.production.construction}%"></div>
+                                    </div>
+                                    <div class="stat-value">${analysis.trends.production.construction}%</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+                    },
+
+                    toggleAnalysisMode() {
+                         this.isAnalysisMode = !this.isAnalysisMode;
+
+                         if (this.isAnalysisMode) {
+                              this.map.addControl(this.drawControl);
+                         } else {
+                              this.map.removeControl(this.drawControl);
+                              this.clearDrawings();
+                         }
+                    },
+
+                    clearDrawings() {
+                         this.drawnItems.clearLayers();
+                    },
+               };
+
+               // Map Initialization and Control Functions
+               function initializeMap() {
+                    map = L.map('map', {
+                         center: [16.047079, 108.20623],
+                         zoom: 12,
+                    });
+
+                    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                         attribution: 'Tiles &copy; Esri',
+                         maxZoom: 19,
+                    }).addTo(map);
+
+                    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', {
+                         attribution: 'Labels &copy; Esri',
+                         maxZoom: 19,
+                    }).addTo(map);
+
+                    AreaAnalysis.initialize(map);
+               }
+               async function searchLocation() {
+                    const searchInput = document.getElementById('searchInput');
+                    const loadingSpan = document.getElementById('loading');
+                    const searchTerm = searchInput.value.trim();
+
+                    if (!searchTerm) return;
+
+                    try {
+                         loadingSpan.style.display = 'inline';
+                         console.log('Đang tìm kiếm:', searchTerm);
+
+                         // Thử tìm kiếm với từ khóa Việt Nam trước
+                         let nominatimResponse = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(searchTerm + ' Việt Nam')}&format=json&limit=1&countrycodes=vn`);
+
+                         if (!nominatimResponse.ok) {
+                              throw new Error('Không thể kết nối đến dịch vụ tìm kiếm');
+                         }
+
+                         let nominatimData = await nominatimResponse.json();
+
+                         // Nếu không tìm thấy, thử tìm không giới hạn quốc gia
+                         if (!nominatimData || nominatimData.length === 0) {
+                              nominatimResponse = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(searchTerm)}&format=json&limit=1`);
+                              nominatimData = await nominatimResponse.json();
+                         }
+
+                         // Nếu vẫn không tìm thấy
+                         if (!nominatimData || nominatimData.length === 0) {
+                              throw new Error('Không tìm thấy địa điểm, vui lòng thử tìm kiếm với từ khóa khác');
+                         }
+
+                         const location = nominatimData[0];
+                         const lat = parseFloat(location.lat);
+                         const lng = parseFloat(location.lon);
+
+                         // Xác định loại địa điểm
+                         let locationType = 'địa danh';
+                         if (location.type === 'administrative' && location.class === 'boundary') {
+                              if (location.type === 'city' || location.type === 'municipality') {
+                                   locationType = 'thành phố';
+                              } else if (location.type === 'province') {
+                                   locationType = 'tỉnh';
+                              }
+                         }
+
+                         const prompt = `Hãy phân tích địa điểm "${searchTerm}" tại vị trí (${lat}, ${lng}).
+                Chỉ trả về theo định dạng JSON sau, không thêm text nào khác:
+                {
+                    "name": "${location.display_name.split(',')[0]}",
+                    "lat": ${lat},
+                    "lng": ${lng},
+                    "sectors": [
+                        {
+                            "name": "tên ngành",
+                            "percentage": số_phần_trăm,
+                            "description": "mô tả ngắn về đặc điểm và vai trò của ngành này tại khu vực"
+                        }
+                    ],
+                    "analysis": {
+                        "strengths": "điểm mạnh của khu vực",
+                        "weaknesses": "điểm yếu cần cải thiện",
+                        "challenges": "khó khăn cần giải quyết", 
+                        "requirements": "kiến thức và kỹ năng cần có"
+                    }
+                }
+                    Lưu ý:
+                        - Phân tích và chọn tối đa 5 ngành thực sự nổi bật, quan trọng nhất của khu vực
+                        - Tỷ lệ phần trăm phản ánh mức độ đóng góp/quan trọng của ngành đó với địa phương
+                        - Tên ngành phải cụ thể, thể hiện được đặc trưng của khu vực`;
+
+                         const response = await fetch(`${config.GEMINI_API_URL}?key=${config.GEMINI_API_KEY}`, {
+                              method: 'POST',
+                              headers: {
+                                   'Content-Type': 'application/json',
+                              },
+                              body: JSON.stringify({
+                                   contents: [
+                                        {
+                                             parts: [
+                                                  {
+                                                       text: prompt,
+                                                  },
+                                             ],
+                                        },
+                                   ],
+                                   generationConfig: {
+                                        temperature: 0.1,
+                                        topP: 1,
+                                        topK: 1,
+                                   },
+                              }),
+                         });
+
+                         const data = await response.json();
+
+                         if (!data.candidates || !data.candidates[0]?.content?.parts[0]?.text) {
+                              throw new Error('Không nhận được dữ liệu phân tích từ API');
+                         }
+
+                         let jsonText = data.candidates[0].content.parts[0].text;
+                         jsonText = cleanJsonText(jsonText);
+
+                         let locationData = JSON.parse(jsonText);
+                         validateLocationData(locationData);
+
+                         // Đảm bảo giữ nguyên tọa độ từ Nominatim
+                         locationData.lat = lat;
+                         locationData.lng = lng;
+
+                         const marker = createLocationMarker(locationData);
+                         saveSearchPoint(locationData);
+                         updateMapView(locationData);
+                         marker.openPopup();
+                    } catch (error) {
+                         console.error('Search Error:', error);
+                         alert('Có lỗi xảy ra khi tìm kiếm địa điểm: ' + error.message);
+                    } finally {
+                         loadingSpan.style.display = 'none';
+                    }
+               }
+
+               async function analyzeBusinessIdea(locationData, countryCode) {
+                    const prompt = `Hãy đề xuất một ý tưởng kinh doanh phù hợp cho khu vực ${locationData.name} dựa trên các thông tin sau:
+            
+            Thông tin về khu vực:
+            - Dân số: ${locationData.population.toLocaleString()} người
+            - Mật độ: ${locationData.density} người/km²
+            - Thu nhập bình quân: ${countryCode === 'VN' ? `${locationData.income} triệu đồng/tháng` : `$${locationData.income}/năm`}
+            
+            - Xu hướng phát triển: ${locationData.trends.join(', ')}
+            - Cơ hội: ${locationData.opportunities}
+            - Thách thức: ${locationData.challenges}
+
+            Hãy phân tích và trả về kết quả theo định dạng JSON sau:
+            {
+                "businessIdea": {
+                    "name": "Tên ý tưởng kinh doanh",
+                    "description": "Mô tả ngắn gọn về ý tưởng",
+                    "businessModel": {
+                        "overview": "Tổng quan về mô hình kinh doanh",
+                        "targetCustomer": "Đối tượng khách hàng mục tiêu",
+                        "valueProposition": "Giá trị mang lại cho khách hàng",
+                        "revenueStreams": "Các nguồn thu chính"
+                    },
+                    "challenges": [
+                        {
+                            "challenge": "Mô tả thách thức",
+                            "solution": "Giải pháp đề xuất"
+                        }
+                    ],
+                    "implementationSteps": [
+                        "Các bước triển khai chính"
+                    ]
+                }
+            }`;
+
+                    try {
+                         const response = await fetch(`${config.GEMINI_API_URL}?key=${config.GEMINI_API_KEY}`, {
+                              method: 'POST',
+                              headers: {
+                                   'Content-Type': 'application/json',
+                              },
+                              body: JSON.stringify({
+                                   contents: [
+                                        {
+                                             parts: [
+                                                  {
+                                                       text: prompt,
+                                                  },
+                                             ],
+                                        },
+                                   ],
+                                   generationConfig: {
+                                        temperature: 0.7,
+                                        topK: 40,
+                                        topP: 0.95,
+                                        maxOutputTokens: 1024,
+                                   },
+                              }),
+                         });
+
+                         if (!response.ok) {
+                              throw new Error('Không thể kết nối đến API');
+                         }
+
+                         const result = await response.json();
+                         if (!result.candidates || !result.candidates[0]?.content?.parts[0]?.text) {
+                              throw new Error('Không nhận được phản hồi hợp lệ');
+                         }
+
+                         let jsonText = result.candidates[0].content.parts[0].text;
+                         jsonText = cleanJsonText(jsonText);
+                         return JSON.parse(jsonText);
+                    } catch (error) {
+                         console.error('Business Analysis Error:', error);
+                         throw new Error('Không thể phân tích ý tưởng kinh doanh');
+                    }
+               }
+
+               async function showBusinessAnalysis(locationName, isVietnam) {
+                    const locationData = isVietnam ? provinceData[locationName] : usData[locationName];
+                    if (!locationData) return;
+
+                    try {
+                         // Hiển thị loading
+                         const loadingPopup = L.popup().setLatLng(locationData.coordinates).setContent('<div style="text-align: center; padding: 20px;">Đang phân tích ý tưởng kinh doanh...</div>').openOn(map);
+
+                         const analysis = await analyzeBusinessIdea({ ...locationData, name: locationName }, isVietnam ? 'VN' : 'US');
+
+                         // Lưu ý tưởng mới
+                         const ideaId = saveBusinessIdea(
+                              {
+                                   name: locationName,
+                                   lat: locationData.coordinates[0],
+                                   lng: locationData.coordinates[1],
+                                   type: isVietnam ? 'tỉnh' : 'bang',
+                              },
+                              analysis,
+                         );
+
+                         // Kiểm tra xem có ý tưởng trước đó không
+                         const previousIdeas = getBusinessIdeasHistory().filter((item) => item.location.name === locationName && Math.abs(item.location.lat - locationData.coordinates[0]) < 0.0001 && Math.abs(item.location.lng - locationData.coordinates[1]) < 0.0001);
+
+                         // Tạo nội dung popup phân tích
+                         const popupContent = `
+            <div class="business-analysis-popup">
+                <h4>${analysis.businessIdea.name}</h4>
+                
+                <div class="business-section">
+                    <div class="business-section-title">Mô tả</div>
+                    <p>${analysis.businessIdea.description}</p>
+                </div>
+
+                <div class="business-section">
+                    <div class="business-section-title">Mô hình kinh doanh</div>
+                    <p><strong>Tổng quan:</strong> ${analysis.businessIdea.businessModel.overview}</p>
+                    <p><strong>Khách hàng mục tiêu:</strong> ${analysis.businessIdea.businessModel.targetCustomer}</p>
+                    <p><strong>Giá trị mang lại:</strong> ${analysis.businessIdea.businessModel.valueProposition}</p>
+                    <p><strong>Nguồn thu:</strong> ${analysis.businessIdea.businessModel.revenueStreams}</p>
+                </div>
+
+                <div class="business-section">
+                    <div class="business-section-title">Thách thức và Giải pháp</div>
+                    ${analysis.businessIdea.challenges
+                         .map(
+                              (item) => `
+                        <div class="challenge-item">
+                            <p><strong>Thách thức:</strong> ${item.challenge}</p>
+                            <p><strong>Giải pháp:</strong> ${item.solution}</p>
+                        </div>
+                    `,
+                         )
+                         .join('')}
+                </div>
+
+                <div class="business-section">
+                    <div class="business-section-title">Các bước triển khai</div>
+                    ${analysis.businessIdea.implementationSteps
+                         .map(
+                              (step, index) => `
+                        <div class="implementation-step">
+                            <div class="step-number">${index + 1}</div>
+                            <div>${step}</div>
+                        </div>
+                    `,
+                         )
+                         .join('')}
+                </div>
+
+                <div style="margin-top: 15px; display: flex; gap: 10px; justify-content: center;">
+                    <button onclick="showBusinessHistory(${locationData.coordinates[0]}, ${locationData.coordinates[1]})" 
+                            class="analyze-business-btn" style="background-color: #2196F3;">
+                        <i class="material-icons">history</i>
+                        Xem lịch sử ý tưởng
+                    </button>
+                    <button onclick="showBusinessAnalysis('${locationName}', ${isVietnam})" 
+                            class="analyze-business-btn" style="background-color: #4CAF50;">
+                        <i class="material-icons">add_circle</i>
+                        Tạo ý tưởng mới
+                    </button>
+                </div>
+            </div>
+        `;
+
+                         // Đóng loading popup và hiển thị kết quả
+                         map.closePopup(loadingPopup);
+                         L.popup().setLatLng(locationData.coordinates).setContent(popupContent).openOn(map);
+                    } catch (error) {
+                         console.error(error);
+                         map.closePopup();
+                         alert('Có lỗi xảy ra khi phân tích ý tưởng kinh doanh: ' + error.message);
+                    }
+               }
+
+               function initializeControls() {
+                    const historyPanel = document.getElementById('history-panel');
+                    const toggleHistoryBtn = document.getElementById('toggleHistory');
+                    const toggleAnalysisBtn = document.getElementById('toggleAnalysis');
+                    const countriesPanel = document.getElementById('countries-panel');
+                    const toggleCountriesBtn = document.getElementById('toggleCountries');
+                    const closeHistoryBtn = document.getElementById('closeHistoryPanel');
+                    const closeCountriesBtn = document.getElementById('closeCountriesPanel');
+                    const backToInitialBtn = document.getElementById('backToInitialView');
+
+                    // Initialize event listeners
+                    toggleHistoryBtn.addEventListener('click', function () {
+                         historyPanel.classList.toggle('visible');
+                         this.classList.toggle('active');
+                         countriesPanel.classList.remove('visible');
+                         toggleCountriesBtn.classList.remove('active');
+                    });
+
+                    toggleCountriesBtn.addEventListener('click', function () {
+                         if (!this.disabled) {
+                              countriesPanel.classList.toggle('visible');
+                              this.classList.toggle('active');
+                              historyPanel.classList.remove('visible');
+                              toggleHistoryBtn.classList.remove('active');
+                         }
+                    });
+
+                    closeHistoryBtn.addEventListener('click', function () {
+                         historyPanel.classList.remove('visible');
+                         toggleHistoryBtn.classList.remove('active');
+                    });
+
+                    closeCountriesBtn.addEventListener('click', function () {
+                         countriesPanel.classList.remove('visible');
+                         toggleCountriesBtn.classList.remove('active');
+                    });
+
+                    toggleAnalysisBtn.addEventListener('click', function () {
+                         AreaAnalysis.toggleAnalysisMode();
+                         this.classList.toggle('active');
+                    });
+
+                    document.getElementById('searchInput').addEventListener('keypress', function (e) {
+                         if (e.key === 'Enter') {
+                              searchLocation();
+                         }
+                    });
+
+                    backToInitialBtn.addEventListener('click', function () {
+                         if (searchMarker) {
+                              map.removeLayer(searchMarker);
+                              searchMarker = null;
+                         }
+                         markers.forEach((marker) => {
+                              map.removeLayer(marker);
+                         });
+                         markers.clear();
+
+                         map.setView([16.047079, 108.20623], 12);
+                         this.style.display = 'none';
+
+                         document.getElementById('history-panel').classList.remove('visible');
+                         document.getElementById('countries-panel').classList.remove('visible');
+                         document.getElementById('toggleHistory').classList.remove('active');
+                         document.getElementById('toggleCountries').classList.remove('active');
+                         document.getElementById('searchInput').value = '';
+                    });
+
+                    map.on('moveend', function () {
+                         if (map.getZoom() !== 12 || map.getCenter().lat !== 16.047079 || map.getCenter().lng !== 108.20623) {
+                              backToInitialBtn.style.display = 'flex';
+                         } else {
+                              backToInitialBtn.style.display = 'none';
+                         }
+                    });
+
+                    addPinControl();
+               }
+
+               async function analyzeSearchBusinessIdea(locationData) {
+                    const prompt = `Hãy đề xuất một ý tưởng kinh doanh phù hợp cho khu vực ${locationData.name} dựa trên các thông tin sau:
+    Ngành nghề đừng đầu ở hiện tại và tương lai của khu vực đó
+    Thông tin về khu vực:
+    - Vị trí: ${locationData.lat}, ${locationData.lng}
+    - Điểm mạnh: ${locationData.analysis.strengths}
+    - Điểm yếu: ${locationData.analysis.weaknesses}
+    - Thách thức: ${locationData.analysis.challenges}
+    
+    Hãy phân tích và trả về kết quả theo định dạng JSON sau:
+    {
+        "businessIdea": {
+            "name": "Tên ý tưởng kinh doanh",
+            "description": "Mô tả ngắn gọn về ý tưởng",
+            "businessModel": {
+                "overview": "Tổng quan về mô hình kinh doanh",
+                "targetCustomer": "Đối tượng khách hàng mục tiêu",
+                "valueProposition": "Giá trị mang lại cho khách hàng",
+                "revenueStreams": "Các nguồn thu chính"
+            },
+            "challenges": [
+                {
+                    "challenge": "Mô tả thách thức",
+                    "solution": "Giải pháp đề xuất"
+                }
+            ],
+            "implementationSteps": [
+                "Các bước triển khai chính"
+            ]
+        }
+    }`;
+
+                    try {
+                         const response = await fetch(`${config.GEMINI_API_URL}?key=${config.GEMINI_API_KEY}`, {
+                              method: 'POST',
+                              headers: {
+                                   'Content-Type': 'application/json',
+                              },
+                              body: JSON.stringify({
+                                   contents: [
+                                        {
+                                             parts: [
+                                                  {
+                                                       text: prompt,
+                                                  },
+                                             ],
+                                        },
+                                   ],
+                                   generationConfig: {
+                                        temperature: 0.7,
+                                        topK: 40,
+                                        topP: 0.95,
+                                        maxOutputTokens: 1024,
+                                   },
+                              }),
+                         });
+
+                         if (!response.ok) {
+                              throw new Error('Không thể kết nối đến API');
+                         }
+
+                         const result = await response.json();
+                         if (!result.candidates || !result.candidates[0]?.content?.parts[0]?.text) {
+                              throw new Error('Không nhận được phản hồi hợp lệ');
+                         }
+
+                         let jsonText = result.candidates[0].content.parts[0].text;
+                         jsonText = cleanJsonText(jsonText);
+                         return JSON.parse(jsonText);
+                    } catch (error) {
+                         console.error('Business Analysis Error:', error);
+                         throw new Error('Không thể phân tích ý tưởng kinh doanh');
+                    }
+               }
+
+               // Validate dữ liệu địa điểm
+               function validateLocationData(locationData) {
+                    if (!locationData || typeof locationData !== 'object') {
+                         throw new Error('Dữ liệu địa điểm không hợp lệ');
+                    }
+
+                    if (!locationData.lat || !locationData.lng) {
+                         throw new Error('Thiếu thông tin tọa độ địa điểm');
+                    }
+
+                    if (!locationData.name) {
+                         throw new Error('Thiếu tên địa điểm');
+                    }
+
+                    // Đảm bảo sectors là một mảng
+                    if (!Array.isArray(locationData.sectors)) {
+                         locationData.sectors = [];
+                    }
+
+                    // Đảm bảo analysis tồn tại và có đầy đủ trường
+                    locationData.analysis = {
+                         strengths: locationData.analysis?.strengths || '',
+                         weaknesses: locationData.analysis?.weaknesses || '',
+                         challenges: locationData.analysis?.challenges || '',
+                         requirements: locationData.analysis?.requirements || '',
+                    };
+
+                    return locationData;
+               }
+
+               // Validate kết quả phân tích
+               function validateAnalysisResult(analysis) {
+                    if (!analysis || !analysis.businessIdea) {
+                         throw new Error('Kết quả phân tích không hợp lệ');
+                    }
+
+                    // Đảm bảo các trường cần thiết tồn tại
+                    analysis.businessIdea = {
+                         name: analysis.businessIdea.name || 'Chưa có tên',
+                         description: analysis.businessIdea.description || 'Chưa có mô tả',
+                         businessModel: {
+                              overview: analysis.businessIdea.businessModel?.overview || '',
+                              targetCustomer: analysis.businessIdea.businessModel?.targetCustomer || '',
+                              valueProposition: analysis.businessIdea.businessModel?.valueProposition || '',
+                              revenueStreams: analysis.businessIdea.businessModel?.revenueStreams || '',
+                         },
+                         challenges: Array.isArray(analysis.businessIdea.challenges) ? analysis.businessIdea.challenges : [],
+                         implementationSteps: Array.isArray(analysis.businessIdea.implementationSteps) ? analysis.businessIdea.implementationSteps : [],
+                    };
+
+                    return analysis;
+               }
+
+               async function showSearchBusinessAnalysis(locationData) {
+                    try {
+                         // Validate input data
+                         if (!locationData || !locationData.lat || !locationData.lng || !locationData.name) {
+                              throw new Error('Thông tin địa điểm không hợp lệ hoặc thiếu dữ liệu');
+                         }
+
+                         // Ensure we have sectors array and analysis object
+                         locationData.sectors = Array.isArray(locationData.sectors) ? locationData.sectors : [];
+                         locationData.analysis = locationData.analysis || {};
+                         locationData.analysis = {
+                              strengths: locationData.analysis.strengths || '',
+                              weaknesses: locationData.analysis.weaknesses || '',
+                              challenges: locationData.analysis.challenges || '',
+                              requirements: locationData.analysis.requirements || '',
+                         };
+
+                         // Save to window.tempLocationData for future reference
+                         window.tempLocationData = { ...locationData };
+
+                         // Show loading popup
+                         const loadingPopup = L.popup().setLatLng([locationData.lat, locationData.lng]).setContent('<div style="text-align: center; padding: 20px;">Đang phân tích ý tưởng kinh doanh...</div>').openOn(map);
+
+                         try {
+                              // Get previous ideas for this location
+                              const previousIdeas = getBusinessIdeasHistory().filter((item) => item.location && item.location.lat === locationData.lat && item.location.lng === locationData.lng);
+
+                              // Create prompt and get analysis
+                              const prompt = createBusinessPrompt(locationData, previousIdeas);
+                              const analysis = await analyzeSearchBusinessIdea(locationData);
+
+                              // Validate analysis result
+                              if (!analysis || !analysis.businessIdea) {
+                                   throw new Error('Kết quả phân tích không hợp lệ');
+                              }
+
+                              // Save the new idea
+                              const ideaId = saveBusinessIdea(locationData, analysis);
+
+                              // Create popup content
+                              const popupContent = `
+                <div class="business-analysis-popup">
+                    <h4>${analysis.businessIdea.name || 'Chưa có tên'}</h4>
+                    
+                    <div class="business-section">
+                        <div class="business-section-title">Mô tả</div>
+                        <p>${analysis.businessIdea.description || 'Chưa có mô tả'}</p>
+                    </div>
+
+                    <div class="business-section">
+                        <div class="business-section-title">Mô hình kinh doanh</div>
+                        <p><strong>Tổng quan:</strong> ${analysis.businessIdea.businessModel?.overview || ''}</p>
+                        <p><strong>Khách hàng mục tiêu:</strong> ${analysis.businessIdea.businessModel?.targetCustomer || ''}</p>
+                        <p><strong>Giá trị mang lại:</strong> ${analysis.businessIdea.businessModel?.valueProposition || ''}</p>
+                        <p><strong>Nguồn thu:</strong> ${analysis.businessIdea.businessModel?.revenueStreams || ''}</p>
+                    </div>
+
+                    <div class="business-section">
+                        <div class="business-section-title">Thách thức và Giải pháp</div>
+                        ${(analysis.businessIdea.challenges || [])
+                             .map(
+                                  (item) => `
+                            <div class="challenge-item">
+                                <p><strong>Thách thức:</strong> ${item.challenge || ''}</p>
+                                <p><strong>Giải pháp:</strong> ${item.solution || ''}</p>
+                            </div>
+                        `,
+                             )
+                             .join('')}
+                    </div>
+
+                    <div class="business-section">
+                        <div class="business-section-title">Các bước triển khai</div>
+                        ${(analysis.businessIdea.implementationSteps || [])
+                             .map(
+                                  (step, index) => `
+                            <div class="implementation-step">
+                                <div class="step-number">${index + 1}</div>
+                                <div>${step || ''}</div>
+                            </div>
+                        `,
+                             )
+                             .join('')}
+                    </div>
+
+                    <div style="margin-top: 15px; display: flex; gap: 10px; justify-content: center;">
+                        <button onclick="showBusinessHistory(${locationData.lat}, ${locationData.lng})" 
+                                class="analyze-business-btn" style="background-color: #2196F3;">
+                            <i class="material-icons">history</i>
+                            Xem lịch sử ý tưởng
+                        </button>
+                        <button onclick="handleSearchBusinessAnalysis()" 
+                                class="analyze-business-btn">
+                            <i class="material-icons">add_circle</i>
+                            Tạo ý tưởng mới
+                        </button>
+                    </div>
+                </div>
+            `;
+
+                              // Close loading popup and show result
+                              map.closePopup(loadingPopup);
+                              L.popup().setLatLng([locationData.lat, locationData.lng]).setContent(popupContent).openOn(map);
+                         } catch (error) {
+                              // Close loading popup if there's an error
+                              map.closePopup(loadingPopup);
+                              throw error; // Re-throw to be caught by outer try-catch
+                         }
+                    } catch (error) {
+                         console.error('Business Analysis Error:', error);
+                         map.closePopup(); // Ensure any open popup is closed
+                         alert('Có lỗi xảy ra khi phân tích ý tưởng kinh doanh: ' + error.message);
+                    }
+               }
+
+               function showBusinessHistory(lat, lng) {
+                    const ideas = getBusinessIdeasHistory().filter((item) => item.location.lat === lat && item.location.lng === lng);
+
+                    if (ideas.length === 0) {
+                         alert('Chưa có ý tưởng nào được tạo cho địa điểm này.');
+                         return;
+                    }
+
+                    const popupContent = `
+        <div class="business-analysis-popup">
+            <h4>Lịch sử ý tưởng kinh doanh</h4>
+            ${ideas
+                 .map(
+                      (item, index) => `
+                <div class="business-section" style="margin-bottom: 15px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div class="business-section-title">
+                            #${index + 1} - ${item.idea.businessIdea.name}
+                        </div>
+                        <div style="color: #666; font-size: 12px;">
+                            ${new Date(item.timestamp).toLocaleString()}
+                        </div>
+                    </div>
+                    <p style="margin: 10px 0;">${item.idea.businessIdea.description}</p>
+                    <button onclick="showFullBusinessIdea(${item.id})" 
+                            class="analyze-business-btn" 
+                            style="margin-top: 10px; width: 100%;">
+                        <i class="material-icons">visibility</i>
+                        Xem chi tiết
+                    </button>
+                </div>
+            `,
+                 )
+                 .join('')}
+        </div>
+    `;
+
+                    L.popup().setLatLng([lat, lng]).setContent(popupContent).openOn(map);
+               }
+
+               function showFullBusinessIdea(ideaId) {
+                    const history = getBusinessIdeasHistory();
+                    const idea = history.find((item) => item.id === ideaId);
+
+                    if (!idea) {
+                         alert('Không tìm thấy ý tưởng này.');
+                         return;
+                    }
+
+                    const analysis = idea.idea;
+                    const popupContent = `
+        <div class="business-analysis-popup">
+            <h4>${analysis.businessIdea.name}</h4>
+            
+            <div class="business-section">
+                <div class="business-section-title">Mô tả</div>
+                <p>${analysis.businessIdea.description}</p>
+            </div>
+
+            <div class="business-section">
+                <div class="business-section-title">Mô hình kinh doanh</div>
+                <p><strong>Tổng quan:</strong> ${analysis.businessIdea.businessModel.overview}</p>
+                <p><strong>Khách hàng mục tiêu:</strong> ${analysis.businessIdea.businessModel.targetCustomer}</p>
+                <p><strong>Giá trị mang lại:</strong> ${analysis.businessIdea.businessModel.valueProposition}</p>
+                <p><strong>Nguồn thu:</strong> ${analysis.businessIdea.businessModel.revenueStreams}</p>
+            </div>
+
+            <div class="business-section">
+                <div class="business-section-title">Thách thức và Giải pháp</div>
+                ${analysis.businessIdea.challenges
+                     .map(
+                          (item) => `
+                    <div class="challenge-item">
+                        <p><strong>Thách thức:</strong> ${item.challenge}</p>
+                        <p><strong>Giải pháp:</strong> ${item.solution}</p>
+                    </div>
+                `,
+                     )
+                     .join('')}
+            </div>
+
+            <div class="business-section">
+                <div class="business-section-title">Các bước triển khai</div>
+                ${analysis.businessIdea.implementationSteps
+                     .map(
+                          (step, index) => `
+                    <div class="implementation-step">
+                        <div class="step-number">${index + 1}</div>
+                        <div>${step}</div>
+                    </div>
+                `,
+                     )
+                     .join('')}
+            </div>
+
+            <div style="margin-top: 15px; display: flex; gap: 10px; justify-content: center;">
+                <button onclick="showBusinessHistory(${idea.location.lat}, ${idea.location.lng})" 
+                        class="analyze-business-btn" style="background-color: #2196F3;">
+                    <i class="material-icons">arrow_back</i>
+                    Quay lại lịch sử
+                </button>
+                <button onclick="deleteBusinessIdea(${ideaId}); showBusinessHistory(${idea.location.lat}, ${idea.location.lng})" 
+                        class="analyze-business-btn" style="background-color: #f44336;">
+                    <i class="material-icons">delete</i>
+                    Xóa ý tưởng
+                </button>
+            </div>
+        </div>
+    `;
+
+                    L.popup().setLatLng([idea.location.lat, idea.location.lng]).setContent(popupContent).openOn(map);
+               }
+
+               function initializeCountriesPanel() {
+                    const backButton = document.getElementById('backButton');
+                    const countriesList = document.getElementById('countriesList');
+                    const titleList = document.getElementById('title-list');
+
+                    backButton.addEventListener('click', showCountriesList);
+                    showCountriesList();
+
+                    function showCountriesList() {
+                         const searchContainer = document.querySelector('.search-in-countries');
+                         searchContainer.classList.remove('hidden');
+                         backButton.classList.remove('visible');
+                         countriesList.innerHTML = '';
+                         titleList.innerText = 'Danh sách quốc gia';
+                         const flags = {
+                              VN: 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/21/Flag_of_Vietnam.svg/1200px-Flag_of_Vietnam.svg.png',
+                              US: 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a4/Flag_of_the_United_States.svg/1200px-Flag_of_the_United_States.svg.png',
+                         };
+
+                         countries.forEach((country) => {
+                              const countryDiv = document.createElement('div');
+                              countryDiv.className = 'country-item';
+
+                              countryDiv.innerHTML = `
+                        <span class="country-name">${country.name}</span>
+                        <img src="${flags[country.code]}" 
+                            alt="${country.name}" 
+                            class="country-flag">
+                    `;
+
+                              countryDiv.addEventListener('click', function () {
+                                   if (country.code === 'VN') {
+                                        showProvincesList(country.code);
+                                        titleList.innerText = 'Danh sách các tỉnh';
+                                   } else {
+                                        showStatesList(country.code);
+                                   }
+                              });
+
+                              countriesList.appendChild(countryDiv);
+                         });
+                    }
+
+                    function showStatesList() {
+                         const countriesList = document.getElementById('countriesList');
+                         const backButton = document.getElementById('backButton');
+                         const searchContainer = document.querySelector('.search-in-countries');
+                         const titleList = document.getElementById('title-list');
+
+                         searchContainer.classList.add('hidden');
+
+                         if (Object.keys(usData).length === 0) {
+                              countriesList.innerHTML = `
+                            <div style="padding: 20px; text-align: center; color: #666;">
+                                Không có dữ liệu cho Mỹ.<br>
+                                Vui lòng kiểm tra file US.csv.
+                            </div>
+                        `;
+                              return;
+                         }
+
+                         backButton.classList.add('visible');
+                         countriesList.innerHTML = '';
+                         titleList.innerText = 'Danh sách các bang';
+
+                         // Sắp xếp các bang theo dân số (giảm dần)
+                         const sortedStates = Object.entries(usData)
+                              .sort((a, b) => b[1].population - a[1].population)
+                              .map((entry) => entry[0]);
+
+                         sortedStates.forEach((location, index) => {
+                              const locationDiv = document.createElement('div');
+                              locationDiv.className = 'province-item';
+
+                              const locationData = usData[location];
+                              let medal = '';
+                              if (index === 0) medal = '🥇';
+                              else if (index === 1) medal = '🥈';
+                              else if (index === 2) medal = '🥉';
+
+                              const stateContent = `
+                            <div class="province-header" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0;">
+                                <div style="flex: 1;">${index + 1}. ${location} ${medal}</div>
+                                <button class="toggle-districts" style="background: none; border: none; color: #2196F3; cursor: pointer;">
+                                    <span class="material-icons">expand_more</span>
+                                </button>
+                            </div>
+                            <div class="province-details" style="display: none; padding: 10px; background: #f8f9fa; border-radius: 8px; margin-top: 10px;">
+                                <div style="margin-bottom: 10px;">
+                                    <p><strong>Population:</strong> ${locationData.population?.toLocaleString()} people</p>
+                                    <p><strong>Area:</strong> ${locationData.area?.toLocaleString()} sq km</p>
+                                    <p><strong>Population Density:</strong> ${locationData.density?.toLocaleString()} people/sq km</p>
+                                    <p><strong>Average Income:</strong> $${locationData.income?.toLocaleString()}/year</p>
+                                </div>
+                                ${
+                                     locationData.sectors && locationData.sectors.length > 0
+                                          ? `
+                                    <div style="margin-bottom: 10px;">
+                                        <p><strong>Main Industries:</strong></p>
+                                        <ul style="list-style-type: disc; margin-left: 20px; margin-bottom: 5px;">
+                                            ${locationData.sectors.map((sector) => `<li>${sector}</li>`).join('')}
+                                        </ul>
+                                    </div>
+                                `
+                                          : ''
+                                }
+                                ${
+                                     locationData.trends && locationData.trends.length > 0
+                                          ? `
+                                    <div style="margin-bottom: 10px;">
+                                        <p><strong>Development Trends:</strong></p>
+                                        <ul style="list-style-type: disc; margin-left: 20px; margin-bottom: 5px;">
+                                            ${locationData.trends.map((trend) => `<li>${trend}</li>`).join('')}
+                                        </ul>
+                                    </div>
+                                `
+                                          : ''
+                                }
+                                ${
+                                     locationData.opportunities
+                                          ? `
+                                    <div style="margin-bottom: 10px;">
+                                        <p><strong>Key Opportunities:</strong> ${locationData.opportunities}</p>
+                                    </div>
+                                `
+                                          : ''
+                                }
+                                ${
+                                     locationData.challenges
+                                          ? `
+                                    <div style="margin-bottom: 10px;">
+                                        <p><strong>Key Challenges:</strong> ${locationData.challenges}</p>
+                                    </div>
+                                `
+                                          : ''
+                                }
+                            </div>
+                        `;
+
+                              locationDiv.innerHTML = stateContent;
+
+                              // Xử lý sự kiện toggle
+                              const toggleButton = locationDiv.querySelector('.toggle-districts');
+                              const locationDetails = locationDiv.querySelector('.province-details');
+
+                              if (toggleButton) {
+                                   toggleButton.addEventListener('click', (e) => {
+                                        e.stopPropagation();
+                                        const icon = toggleButton.querySelector('.material-icons');
+                                        const isExpanded = locationDetails.style.display !== 'none';
+
+                                        locationDetails.style.display = isExpanded ? 'none' : 'block';
+                                        icon.style.transform = isExpanded ? 'rotate(0deg)' : 'rotate(180deg)';
+                                   });
+                              }
+
+                              // Xử lý sự kiện click cho header
+                              locationDiv.querySelector('.province-header').addEventListener('click', function () {
+                                   zoomToLocation(location, 'US');
+                                   document.getElementById('countries-panel').classList.remove('visible');
+                                   document.getElementById('toggleCountries').classList.remove('active');
+                              });
+
+                              countriesList.appendChild(locationDiv);
+                         });
+                    }
+
+                    function showProvincesList(countryCode) {
+                         const data = countryCode === 'VN' ? provinceData : usData;
+                         const searchContainer = document.querySelector('.search-in-countries');
+                         searchContainer.classList.add('hidden');
+
+                         if (Object.keys(data).length === 0) {
+                              countriesList.innerHTML = `
+                <div style="padding: 20px; text-align: center; color: #666;">
+                    Không có dữ liệu cho Việt Nam.<br>
+                    Vui lòng kiểm tra file CSV.
+                </div>
+            `;
+                              return;
+                         }
+
+                         backButton.classList.add('visible');
+                         countriesList.innerHTML = '';
+
+                         // Danh sách có sẵn cho Việt Nam
+                         const orderedProvinces = [
+                              'TP. Hồ Chí Minh',
+                              'Hà Nội',
+                              'Bình Dương',
+                              'Đồng Nai',
+                              'Bà Rịa – Vũng Tàu',
+                              'Hải Phòng',
+                              'Quảng Ninh',
+                              'Bắc Ninh',
+                              'Thanh Hóa',
+                              'Nghệ An',
+                              'Hải Dương',
+                              'Long An',
+                              'Bắc Giang',
+                              'Vĩnh Phúc',
+                              'Thái Nguyên',
+                              'Hưng Yên',
+                              'Đà Nẵng',
+                              'Quảng Ngãi',
+                              'Quảng Nam',
+                              'Kiên Giang',
+                              'Tiền Giang',
+                              'Thái Bình',
+                              'An Giang',
+                              'Đắk Lắk',
+                              'Cần Thơ',
+                              'Bình Định',
+                              'Gia Lai',
+                              'Lâm Đồng',
+                              'Tây Ninh',
+                              'Đồng Tháp',
+                              'Khánh Hòa',
+                              'Bình Thuận',
+                              'Hà Tĩnh',
+                              'Nam Định',
+                              'Phú Thọ',
+                              'Bình Phước',
+                              'Hà Nam',
+                              'Ninh Bình',
+                              'Cà Mau',
+                              'Trà Vinh',
+                              'Vĩnh Long',
+                              'Lào Cai',
+                              'Thừa Thiên Huế',
+                              'Sóc Trăng',
+                              'Sơn La',
+                              'Bến Tre',
+                              'Hòa Bình',
+                              'Bạc Liêu',
+                              'Phú Yên',
+                              'Quảng Bình',
+                              'Hậu Giang',
+                              'Ninh Thuận',
+                              'Tuyên Quang',
+                              'Quảng Trị',
+                              'Lạng Sơn',
+                              'Yên Bái',
+                              'Đắk Nông',
+                              'Kon Tum',
+                              'Hà Giang',
+                              'Điện Biên',
+                              'Lai Châu',
+                              'Cao Bằng',
+                              'Bắc Kạn',
+                         ];
+
+                         orderedProvinces.forEach((location, index) => {
+                              if (data[location]) {
+                                   const locationDiv = document.createElement('div');
+                                   locationDiv.className = 'province-item';
+
+                                   let medal = '';
+                                   if (index === 0) medal = '🥇';
+                                   else if (index === 1) medal = '🥈';
+                                   else if (index === 2) medal = '🥉';
+
+                                   const grdpInfo = data[location].grdp ? `GRDP: ${data[location].grdp} tỉ USD` : '';
+
+                                   // Tạo nội dung cho tỉnh/thành phố
+                                   const provinceContent = `
+                    <div class="province-header" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0;">
+                        <div style="flex: 1;">${index + 1}. ${location} ${medal}</div>
+                        <div style="color: #666; font-size: 0.9em; margin-left: 10px;">${grdpInfo}</div>
+                        <button class="toggle-districts" style="background: none; border: none; color: #2196F3; cursor: pointer;">
+                            <span class="material-icons">expand_more</span>
+                        </button>
+                    </div>
+                    <div class="province-details" style="display: none; padding: 10px; background: #f8f9fa; border-radius: 8px; margin-top: 10px;">
+                        <div style="margin-bottom: 10px;">
+                            <p><strong>Dân số:</strong> ${data[location].population?.toLocaleString()} người</p>
+                            <p><strong>Diện tích:</strong> ${data[location].area?.toLocaleString()} km²</p>
+                            <p><strong>Mật độ dân số:</strong> ${data[location].density?.toLocaleString()} người/km²</p>
+                            <p><strong>Thu nhập bình quân:</strong> ${countryCode === 'VN' ? `${data[location].income} triệu đồng/tháng` : `$${data[location].income?.toLocaleString()}/year`}</p>
+                        </div>
+                        ${
+                             data[location].sectors && data[location].sectors.length > 0
+                                  ? `
+                            <div style="margin-bottom: 10px;">
+                                <p><strong>Các ngành chính:</strong></p>
+                                <ul style="list-style-type: disc; margin-left: 20px; margin-bottom: 5px;">
+                                    ${data[location].sectors.map((sector) => `<li>${sector}</li>`).join('')}
+                                </ul>
+                            </div>
+                        `
+                                  : ''
+                        }
+                        ${
+                             data[location].trends && data[location].trends.length > 0
+                                  ? `
+                            <div style="margin-bottom: 10px;">
+                                <p><strong>Xu hướng phát triển:</strong></p>
+                                <ul style="list-style-type: disc; margin-left: 20px; margin-bottom: 5px;">
+                                    ${data[location].trends.map((trend) => `<li>${trend}</li>`).join('')}
+                                </ul>
+                            </div>
+                        `
+                                  : ''
+                        }
+                    </div>
+                `;
+
+                                   // Thêm nội dung quận/huyện nếu có
+                                   const districtsContent = districtsData[location]
+                                        ? `
+                    <div class="districts-list" style="display: none; margin-top: 10px; padding: 10px; background: #fff; border-radius: 8px;">
+                        <h4 style="margin-bottom: 10px; color: #2196F3;">Quận/Huyện thuộc ${location}</h4>
+                        ${districtsData[location]
+                             .map(
+                                  (district) => `
+                            <div class="district-item" style="padding: 8px; margin: 4px 0; background: #f8f9fa; border-radius: 4px; cursor: pointer;"
+                                 data-lat="${district.coordinates[0]}" 
+                                 data-lng="${district.coordinates[1]}">
+                                <div style="font-weight: 500;">${district.name}</div>
+                                <div style="font-size: 0.8em; color: #666;">
+                                    Vị trí: ${district.coordinates[0]?.toFixed(6)}, ${district.coordinates[1]?.toFixed(6)}
+                                </div>
+                            </div>
+                        `,
+                             )
+                             .join('')}
+                    </div>
+                `
+                                        : '';
+
+                                   locationDiv.innerHTML = provinceContent + districtsContent;
+
+                                   // Xử lý sự kiện click cho toggle buttons
+                                   const toggleButton = locationDiv.querySelector('.toggle-districts');
+                                   const provinceDetails = locationDiv.querySelector('.province-details');
+                                   const districtsList = locationDiv.querySelector('.districts-list');
+
+                                   if (toggleButton) {
+                                        toggleButton.addEventListener('click', (e) => {
+                                             e.stopPropagation();
+                                             const icon = toggleButton.querySelector('.material-icons');
+                                             const isExpanded = provinceDetails.style.display !== 'none';
+
+                                             // Toggle province details
+                                             provinceDetails.style.display = isExpanded ? 'none' : 'block';
+                                             if (districtsList) {
+                                                  districtsList.style.display = isExpanded ? 'none' : 'block';
+                                             }
+
+                                             // Rotate icon
+                                             icon.style.transform = isExpanded ? 'rotate(0deg)' : 'rotate(180deg)';
+                                        });
+                                   }
+
+                                   // Xử lý sự kiện click cho từng quận/huyện
+                                   if (districtsList) {
+                                        locationDiv.querySelectorAll('.district-item').forEach((districtDiv) => {
+                                             districtDiv.addEventListener('click', function (e) {
+                                                  e.stopPropagation();
+                                                  const lat = parseFloat(this.dataset.lat);
+                                                  const lng = parseFloat(this.dataset.lng);
+                                                  const districtName = this.querySelector('div').textContent;
+
+                                                  // Di chuyển bản đồ đến quận/huyện
+                                                  map.setView([lat, lng], 13);
+
+                                                  // Tạo marker với popup có nút phân tích
+                                                  if (markers.has(districtName)) {
+                                                       map.removeLayer(markers.get(districtName));
+                                                  }
+
+                                                  const marker = L.marker([lat, lng])
+                                                       .addTo(map)
+                                                       .bindPopup(
+                                                            `
+                <div style="min-width: 200px;">
+                    <h3 style="color: #2196F3; margin-bottom: 8px;">${districtName}</h3>
+                    <p style="color: #666;">Thuộc ${location}</p>
+                    <div style="margin-top: 8px;">
+                        <p>Vĩ độ: ${lat.toFixed(6)}</p>
+                        <p>Kinh độ: ${lng.toFixed(6)}</p>
+                    </div>
+                    <button onclick="showDistrictAnalysis('${districtName}', '${location}', ${lat}, ${lng})" 
+                            style="
+                                margin-top: 10px;
+                                width: 100%;
+                                padding: 8px 12px;
+                                background: linear-gradient(135deg, #64B5F6 0%, #F48FB1 100%);
+                                border: none;
+                                border-radius: 4px;
+                                color: #333;
+                                cursor: pointer;
+                                display: flex;
+                                align-items: center;
+                                gap: 8px;
+                                justify-content: center;
+                                font-size: 14px;
+                                transition: all 0.3s ease;
+                            ">
+                        <span class="material-icons" style="font-size: 18px;">analytics</span>
+                        Phân tích khu vực
+                    </button>
+                </div>
+            `,
+                                                       )
+                                                       .openPopup();
+
+                                                  markers.set(districtName, marker);
+                                             });
+                                        });
+                                   }
+
+                                   // Thêm sự kiện click cho cả phần tỉnh
+                                   locationDiv.querySelector('.province-header').addEventListener('click', function () {
+                                        zoomToLocation(location, countryCode);
+                                        countriesPanel.classList.remove('visible');
+                                        document.getElementById('toggleCountries').classList.remove('active');
+                                   });
+
+                                   countriesList.appendChild(locationDiv);
+                              }
+                         });
+                    }
+
+                    backButton.addEventListener('click', showCountriesList);
+                    showCountriesList();
+               }
+
+               // Thêm vào phần khởi tạo ứng dụng
+               document.addEventListener('DOMContentLoaded', async function () {
+                    try {
+                         // Load district data
+                         const districtResponse = await fetch('quan_huyen.csv');
+                         const districtText = await districtResponse.text();
+                         districtsData = organizeDistrictsByProvince(districtText);
+
+                         // Initialize other components
+                         initializeMap();
+                         initializeControls();
+                         initializeCountriesPanel();
+                         updateHistoryPanel();
+                         loadProvinceData();
+                    } catch (error) {
+                         console.error('Error loading district data:', error);
+                    }
+               });
+
+               function validateLocationData(locationData) {
+                    if (!locationData || !locationData.name || !locationData.lat || !locationData.lng) {
+                         throw new Error('Không tìm thấy thông tin địa điểm');
+                    }
+
+                    // Đảm bảo có mảng sectors
+                    if (!Array.isArray(locationData.sectors)) {
+                         locationData.sectors = [];
+                    }
+
+                    // Đảm bảo có object analysis
+                    locationData.analysis = locationData.analysis || {
+                         strengths: 'Chưa có thông tin',
+                         weaknesses: 'Chưa có thông tin',
+                         challenges: 'Chưa có thông tin',
+                         requirements: 'Chưa có thông tin',
+                    };
+               }
+
+               function createLocationMarker(locationData) {
+                    if (searchMarker) {
+                         map.removeLayer(searchMarker);
+                    }
+
+                    const popupContent = createSearchResultPopup(locationData);
+                    searchMarker = L.marker([locationData.lat, locationData.lng], {
+                         title: locationData.name,
+                    })
+                         .bindPopup(popupContent)
+                         .addTo(map);
+
+                    return searchMarker;
+               }
+
+               function createSearchResultPopup(locationData) {
+                    // Lưu locationData vào biến tạm thời
+                    if (!setTempLocationData(locationData)) {
+                         return '<div class="error-popup">Dữ liệu địa điểm không hợp lệ</div>';
+                    }
+
+                    // Kiểm tra xem có ý tưởng nào cho địa điểm này chưa
+                    const hasExistingIdeas = getBusinessIdeasHistory().some((item) => item.location.lat === locationData.lat && item.location.lng === locationData.lng);
+
+                    return `
+        <div class="analysis-popup">
+            <h4>${locationData.name}</h4>
+            
+            <div class="section-card">
+                <div class="section-title">
+                    <i class="material-icons">analytics</i>
+                    <h5>Ngành chủ đạo</h5>
+                </div>
+                <div class="stat-container">
+                    ${locationData.sectors
+                         .map(
+                              (sector) => `
+                        <div class="stat-item" title="${sector.description}">
+                            <div class="stat-label">
+                                ${sector.name}
+                                <i class="material-icons info-icon">info</i>
+                            </div>
+                            <div class="stat-bar">
+                                <div class="stat-progress" style="width: ${sector.percentage}%"></div>
+                            </div>
+                            <div class="stat-value">${sector.percentage}%</div>
+                        </div>
+                    `,
+                         )
+                         .join('')}
+                </div>
+            </div>
+
+            <div class="section-card">
+                <div class="analysis-item">
+                    <h5 class="analysis-title">Điểm mạnh</h5>
+                    <p class="analysis-content">${locationData.analysis.strengths}</p>
+                </div>
+                <div class="analysis-item">
+                    <h5 class="analysis-title">Điểm yếu</h5>
+                    <p class="analysis-content">${locationData.analysis.weaknesses}</p>
+                </div>
+                <div class="analysis-item">
+                    <h5 class="analysis-title">Khó khăn</h5>
+                    <p class="analysis-content">${locationData.analysis.challenges}</p>
+                </div>
+                <div class="analysis-item">
+                    <h5 class="analysis-title">Kiến thức cần có</h5>
+                    <p class="analysis-content">${locationData.analysis.requirements}</p>
+                </div>
+            </div>
+
+            <div style="margin-top: 15px; text-align: center; display: flex; gap: 10px; justify-content: center;">
+                <button onclick="handleSearchBusinessAnalysis()" 
+                        class="analyze-business-btn">
+                    <i class="material-icons">lightbulb</i>
+                    Phân tích ý tưởng kinh doanh
+                </button>
+                ${
+                     hasExistingIdeas
+                          ? `
+                    <button onclick="showBusinessHistory(${locationData.lat}, ${locationData.lng})" 
+                            class="analyze-business-btn" style="background-color: #2196F3;">
+                        <i class="material-icons">history</i>
+                        Xem lịch sử ý tưởng
+                    </button>
+                `
+                          : ''
+                }
+            </div>
+        </div>
+    `;
+               }
+
+               function setTempLocationData(data) {
+                    if (!data || !data.lat || !data.lng) {
+                         console.error('Invalid location data:', data);
+                         return false;
+                    }
+                    window.tempLocationData = {
+                         name: data.name || '',
+                         lat: data.lat,
+                         lng: data.lng,
+                         type: data.type || '',
+                         sectors: Array.isArray(data.sectors) ? data.sectors : [],
+                         analysis: {
+                              strengths: data.analysis?.strengths || '',
+                              weaknesses: data.analysis?.weaknesses || '',
+                              challenges: data.analysis?.challenges || '',
+                              requirements: data.analysis?.requirements || '',
+                         },
+                    };
+                    return true;
+               }
+
+               function handleSearchBusinessAnalysis() {
+                    const locationData = window.tempLocationData;
+                    if (!locationData || !locationData.lat || !locationData.lng) {
+                         alert('Không tìm thấy thông tin địa điểm. Vui lòng thử lại.');
+                         return;
+                    }
+                    showSearchBusinessAnalysis(locationData);
+               }
+
+               function updateMapView(locationData) {
+                    const zoomLevel = locationData.type === 'địa danh' ? 15 : locationData.type === 'thành phố' ? 12 : 10;
+                    map.setView([locationData.lat, locationData.lng], zoomLevel);
+               }
+
+               async function analyzeDistrict(districtName, provinceName, coordinates) {
+                    const prompt = `Phân tích quận/huyện ${districtName} thuộc ${provinceName} tại vị trí (${coordinates.lat}, ${coordinates.lng}).
+    Chỉ trả về theo định dạng JSON sau, không thêm text nào khác:
+    {
+        "basicInfo": {
+            "populationDensity": "Mật độ dân số (người/km2)",
+            "averageIncome": "Thu nhập bình quân/tháng (triệu đồng)"
+        },
+        "developmentTrends": [
+            "Xu hướng phát triển 1",
+            "Xu hướng phát triển 2",
+            "Xu hướng phát triển 3"
+        ],
+        "opportunities": [
+            "Cơ hội phát triển 1",
+            "Cơ hội phát triển 2", 
+            "Cơ hội phát triển 3"
+        ],
+        "challenges": [
+            "Thách thức chính 1",
+            "Thách thức chính 2",
+            "Thách thức chính 3"
+        ]
+    }
+    Lưu ý: Tôi là 1 người startup và hãy cho tôi những thông tin thực tế và chuẩn xác nhất có thể    
+    `;
+
+                    try {
+                         const response = await fetch(`${config.GEMINI_API_URL}?key=${config.GEMINI_API_KEY}`, {
+                              method: 'POST',
+                              headers: {
+                                   'Content-Type': 'application/json',
+                              },
+                              body: JSON.stringify({
+                                   contents: [
+                                        {
+                                             parts: [
+                                                  {
+                                                       text: prompt,
+                                                  },
+                                             ],
+                                        },
+                                   ],
+                                   generationConfig: {
+                                        temperature: 0.7,
+                                        topK: 40,
+                                        topP: 0.95,
+                                        maxOutputTokens: 1024,
+                                   },
+                              }),
+                         });
+
+                         const data = await response.json();
+                         let jsonText = data.candidates[0].content.parts[0].text;
+                         jsonText = cleanJsonText(jsonText);
+                         return JSON.parse(jsonText);
+                    } catch (error) {
+                         console.error('District analysis error:', error);
+                         throw new Error('Không thể phân tích quận/huyện');
+                    }
+               }
+
+               function createDistrictPopup(districtName, provinceName, coordinates) {
+                    return `
+        <div style="min-width: 300px;">
+            <h3 style="color: #2196F3; margin-bottom: 8px;">${districtName}</h3>
+            <p style="color: #666;">Thuộc ${provinceName}</p>
+            <div style="margin-top: 8px;">
+                <p>Vĩ độ: ${coordinates.lat.toFixed(6)}</p>
+                <p>Kinh độ: ${coordinates.lng.toFixed(6)}</p>
+            </div>
+            <button onclick="showDistrictAnalysis('${districtName}', '${provinceName}', ${coordinates.lat}, ${coordinates.lng})" 
+                    class="analyze-district-btn" 
+                    style="
+                        margin-top: 10px;
+                        padding: 8px 16px;
+                        background: linear-gradient(135deg, #64B5F6 0%, #F48FB1 100%);
+                        border: none;
+                        border-radius: 4px;
+                        color: white;
+                        cursor: pointer;
+                        display: flex;
+                        align-items: center;
+                        gap: 8px;
+                        width: 100%;
+                        justify-content: center;
+                    ">
+                <span class="material-icons">analytics</span>
+                Phân tích khu vực
+            </button>
+        </div>
+    `;
+               }
+
+               async function showDistrictAnalysis(districtName, provinceName, lat, lng) {
+                    try {
+                         // Hiển thị loading popup
+                         const loadingPopup = L.popup().setLatLng([lat, lng]).setContent('<div style="text-align: center; padding: 20px;">Đang phân tích khu vực...</div>').openOn(map);
+
+                         const prompt = `Với vai trò là một chuyên gia phân tích dữ liệu và quy hoạch đô thị tại Việt Nam, hãy phân tích chi tiết về ${districtName} thuộc ${provinceName}.
+
+Yêu cầu phân tích:
+1. Dựa trên vị trí địa lý (${lat}, ${lng}), đặc điểm của khu vực và các số liệu thống kê gần nhất
+2. Phân tích phải CHÍNH XÁC, PHÙ HỢP với đặc thù của quận/huyện này
+3. Không đưa ra thông tin chung chung hoặc sao chép từ các khu vực khác
+4. Tất cả dữ liệu phải dựa trên thực tế và xu hướng hiện tại của khu vực
+
+Chỉ trả về theo định dạng JSON (không giải thích thêm) sau:
+{
+    "basicInfo": {
+        "populationDensity": "Ước tính mật độ dân số thực tế (người/km2), dựa trên số liệu thống kê gần nhất",
+        "averageIncome": "Ước tính thu nhập bình quân thực tế/tháng (triệu đồng), dựa trên mặt bằng kinh tế của khu vực"
+    },
+    "developmentTrends": [
+        "Xu hướng phát triển quan trọng nhất hiện nay của khu vực (ví dụ: phát triển công nghiệp, đô thị hóa, du lịch...)",
+        "Xu hướng phát triển thứ hai đang diễn ra tại khu vực",
+        "Xu hướng phát triển thứ ba đang diễn ra tại khu vực"
+    ],
+    "opportunities": [
+        "Cơ hội phát triển cụ thể và khả thi nhất cho khu vực",
+        "Cơ hội phát triển thứ hai dựa trên lợi thế của khu vực", 
+        "Cơ hội phát triển thứ ba dựa trên tiềm năng của khu vực"
+    ],
+    "challenges": [
+        "Thách thức lớn nhất đang đối mặt (ví dụ: cơ sở hạ tầng, môi trường, việc làm...)",
+        "Thách thức thứ hai cần giải quyết",
+        "Thách thức thứ ba cần khắc phục"
+    ]
+}
+
+Lưu ý:
+- Mật độ dân số và thu nhập phải phản ánh đúng thực tế kinh tế-xã hội của khu vực
+- Các xu hướng phát triển phải dựa trên các dự án và quy hoạch đang triển khai
+- Cơ hội phải xuất phát từ lợi thế thực tế của khu vực
+- Thách thức phải là những vấn đề thực sự khu vực đang phải đối mặt
+- Chỉ trả về định dạng JSON `;
+
+                         const response = await fetch(`${config.GEMINI_API_URL}?key=${config.GEMINI_API_KEY}`, {
+                              method: 'POST',
+                              headers: {
+                                   'Content-Type': 'application/json',
+                              },
+                              body: JSON.stringify({
+                                   contents: [
+                                        {
+                                             parts: [
+                                                  {
+                                                       text: prompt,
+                                                  },
+                                             ],
+                                        },
+                                   ],
+                                   generationConfig: {
+                                        temperature: 0.2,
+                                        topK: 1,
+                                        topP: 0.1,
+                                        maxOutputTokens: 1024,
+                                   },
+                              }),
+                         });
+
+                         const data = await response.json();
+
+                         if (!data.candidates || !data.candidates[0]?.content?.parts[0]?.text) {
+                              throw new Error('Không nhận được dữ liệu phân tích hợp lệ');
+                         }
+
+                         let jsonText = data.candidates[0].content.parts[0].text;
+                         jsonText = cleanJsonText(jsonText);
+                         const analysis = JSON.parse(jsonText);
+
+                         const analysisContent = `
+            <div class="district-analysis-popup" style="
+                max-height: 70vh;
+                overflow-y: auto;
+                padding-right: 10px;
+                scrollbar-width: thin;
+                scrollbar-color: #90CAF9 #f0f0f0;
+            ">
+                <div class="analysis-header" style="
+                    position: sticky;
+                    top: 0;
+                    background: white;
+                    padding: 10px 0;
+                    margin-bottom: 15px;
+                    z-index: 1000;
+                    border-bottom: 2px solid #f0f0f0;
+                ">
+                    <h3 class="analysis-title" style="
+                        color: #2196F3;
+                        margin: 0;
+                        font-size: 18px;
+                        font-weight: bold;
+                    ">
+                        Phân tích: ${districtName}
+                    </h3>
+                </div>
+                
+                <div class="analysis-content" style="padding-bottom: 15px;">
+                    <div class="info-section" style="
+                        background: linear-gradient(135deg, #f6f9fc 0%, #f3f4f6 100%);
+                        padding: 15px;
+                        border-radius: 8px;
+                        margin-bottom: 15px;
+                        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+                        transition: transform 0.2s ease;
+                    ">
+                        <div class="info-item" style="margin-bottom: 8px;">
+                            <strong style="color: #333;">Mật độ dân số:</strong> 
+                            <span style="color: #666;">${analysis.basicInfo.populationDensity}</span>
+                        </div>
+                        <div class="info-item">
+                            <strong style="color: #333;">Thu nhập bình quân:</strong>
+                            <span style="color: #666;">${analysis.basicInfo.averageIncome}</span>
+                        </div>
+                    </div>
+
+                    <div class="analysis-section" style="
+                        background: linear-gradient(135deg, #f6f9fc 0%, #f3f4f6 100%);
+                        padding: 15px;
+                        border-radius: 8px;
+                        margin-bottom: 15px;
+                        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+                        transition: transform 0.2s ease;
+                    ">
+                        <h4 style="
+                            color: #2196F3;
+                            margin-bottom: 10px;
+                            font-size: 16px;
+                            font-weight: 500;
+                        ">Xu hướng phát triển</h4>
+                        <ul style="
+                            list-style-type: disc;
+                            margin-left: 20px;
+                            color: #666;
+                        ">
+                            ${analysis.developmentTrends
+                                 .map(
+                                      (trend) =>
+                                           `<li style="
+                                    margin-bottom: 8px;
+                                    padding: 5px;
+                                    transition: background-color 0.2s ease;
+                                ">${trend}</li>`,
+                                 )
+                                 .join('')}
+                        </ul>
+                    </div>
+
+                    <div class="analysis-section" style="
+                        background: linear-gradient(135deg, #f6f9fc 0%, #f3f4f6 100%);
+                        padding: 15px;
+                        border-radius: 8px;
+                        margin-bottom: 15px;
+                        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+                        transition: transform 0.2s ease;
+                    ">
+                        <h4 style="
+                            color: #2196F3;
+                            margin-bottom: 10px;
+                            font-size: 16px;
+                            font-weight: 500;
+                        ">Cơ hội phát triển</h4>
+                        <ul style="
+                            list-style-type: disc;
+                            margin-left: 20px;
+                            color: #666;
+                        ">
+                            ${analysis.opportunities
+                                 .map(
+                                      (opportunity) =>
+                                           `<li style="
+                                    margin-bottom: 8px;
+                                    padding: 5px;
+                                    transition: background-color 0.2s ease;
+                                ">${opportunity}</li>`,
+                                 )
+                                 .join('')}
+                        </ul>
+                    </div>
+
+                    <div class="analysis-section" style="
+                        background: linear-gradient(135deg, #f6f9fc 0%, #f3f4f6 100%);
+                        padding: 15px;
+                        border-radius: 8px;
+                        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+                        transition: transform 0.2s ease;
+                    ">
+                        <h4 style="
+                            color: #2196F3;
+                            margin-bottom: 10px;
+                            font-size: 16px;
+                            font-weight: 500;
+                        ">Thách thức chính</h4>
+                        <ul style="
+                            list-style-type: disc;
+                            margin-left: 20px;
+                            color: #666;
+                        ">
+                            ${analysis.challenges
+                                 .map(
+                                      (challenge) =>
+                                           `<li style="
+                                    margin-bottom: 8px;
+                                    padding: 5px;
+                                    transition: background-color 0.2s ease;
+                                ">${challenge}</li>`,
+                                 )
+                                 .join('')}
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="analysis-footer" style="
+                    position: sticky;
+                    bottom: 0;
+                    background: white;
+                    padding: 10px 0;
+                    border-top: 2px solid #f0f0f0;
+                ">
+                    <button onclick="handleBackToDistrictInfo('${districtName}', '${provinceName}', ${lat}, ${lng})" 
+                            style="
+                                width: 100%;
+                                padding: 8px 16px;
+                                background: linear-gradient(135deg, #64B5F6 0%, #F48FB1 100%);
+                                border: none;
+                                border-radius: 4px;
+                                color: #333;
+                                cursor: pointer;
+                                display: flex;
+                                align-items: center;
+                                gap: 8px;
+                                justify-content: center;
+                                font-size: 14px;
+                                transition: all 0.3s ease;
+                            ">
+                        <span class="material-icons" style="font-size: 18px;">arrow_back</span>
+                        Quay lại thông tin quận/huyện
+                    </button>
+                </div>
+            </div>
+        `;
+
+                         // Thêm CSS cho scrollbar
+                         const style = document.createElement('style');
+                         style.textContent = `
+            .district-analysis-popup::-webkit-scrollbar {
+                width: 6px;
+            }
+
+            .district-analysis-popup::-webkit-scrollbar-track {
+                background: #f0f0f0;
+                border-radius: 3px;
+            }
+
+            .district-analysis-popup::-webkit-scrollbar-thumb {
+                background: #90CAF9;
+                border-radius: 3px;
+            }
+
+            .district-analysis-popup::-webkit-scrollbar-thumb:hover {
+                background: #64B5F6;
+            }
+
+            .analysis-section:hover {
+                transform: translateY(-2px);
+            }
+
+            .district-analysis-popup ul li:hover {
+                background-color: rgba(144, 202, 249, 0.1);
+                border-radius: 4px;
+            }
+        `;
+                         document.head.appendChild(style);
+
+                         // Đóng popup loading và hiển thị kết quả
+                         map.closePopup(loadingPopup);
+                         L.popup({
+                              maxWidth: 400,
+                              className: 'district-analysis-popup',
+                         })
+                              .setLatLng([lat, lng])
+                              .setContent(analysisContent)
+                              .openOn(map);
+                    } catch (error) {
+                         console.error('Analysis error:', error);
+                         map.closePopup();
+                         alert('Có lỗi xảy ra khi phân tích khu vực: ' + error.message);
+                    }
+               }
+
+               // Hàm xử lý quay lại thông tin quận/huyện
+               function handleBackToDistrictInfo(districtName, provinceName, lat, lng) {
+                    const marker = L.marker([lat, lng])
+                         .addTo(map)
+                         .bindPopup(
+                              `
+            <div style="min-width: 200px;">
+                <h3 style="color: #2196F3; margin-bottom: 8px;">${districtName}</h3>
+                <p style="color: #666;">Thuộc ${provinceName}</p>
+                <div style="margin-top: 8px;">
+                    <p>Vĩ độ: ${lat.toFixed(6)}</p>
+                    <p>Kinh độ: ${lng.toFixed(6)}</p>
+                </div>
+                <button onclick="showDistrictAnalysis('${districtName}', '${provinceName}', ${lat}, ${lng})" 
+                        style="
+                            margin-top: 10px;
+                            width: 100%;
+                            padding: 8px 12px;
+                            background: linear-gradient(135deg, #64B5F6 0%, #F48FB1 100%);
+                            border: none;
+                            border-radius: 4px;
+                            color: #333;
+                            cursor: pointer;
+                            display: flex;
+                            align-items: center;
+                            gap: 8px;
+                            justify-content: center;
+                            font-size: 14px;
+                            transition: all 0.3s ease;
+                        ">
+                    <span class="material-icons" style="font-size: 18px;">analytics</span>
+                    Phân tích khu vực
+                </button>
+            </div>
+        `,
+                         )
+                         .openPopup();
+
+                    markers.set(districtName, marker);
+               }
+
+               function zoomToLocation(location, countryCode) {
+                    const data = countryCode === 'VN' ? provinceData : usData;
+
+                    if (!data[location]) {
+                         alert('Không tìm thấy dữ liệu cho địa điểm này');
+                         return;
+                    }
+
+                    const [lat, lng] = data[location].coordinates;
+                    map.setView([lat, lng], 11);
+
+                    if (markers.has(location)) {
+                         map.removeLayer(markers.get(location));
+                    }
+
+                    const marker = L.marker([lat, lng])
+                         .addTo(map)
+                         .bindPopup(createLocationPopup(location, data[location], countryCode))
+                         .openPopup();
+
+                    markers.set(location, marker);
+                    document.getElementById('backToInitialView').style.display = 'flex';
+               }
+
+               // Thêm nút phân tích và lịch sử vào cuối popup
+               function createLocationPopup(locationName, data, countryCode) {
+                    const countryName = countryCode === 'VN' ? 'Việt Nam' : 'Mỹ';
+                    const currencyFormat = countryCode === 'VN' ? `${data.income} triệu đồng/tháng` : `$${data.income.toLocaleString()}/year`;
+
+                    // Add GRDP information to the popup if available
+                    const grdpInfo = data.grdp
+                         ? `
+        <div style="margin-bottom: 10px;">
+            <p><strong>Tổng GRDP:</strong> ${data.grdp} tỉ USD</p>
+        </div>
+    `
+                         : '';
+
+                    return `
+        <div class="analysis-popup">
+            <h3 style="margin: 0 0 10px 0; color: #2196F3;">${locationName}</h3>
+            <p style="margin-bottom: 10px; color: #666;">Quốc gia: ${countryName}</p>
+            
+            <div style="margin-bottom: 10px;">
+                <p><strong>Dân số:</strong> ${data.population.toLocaleString()} người</p>
+                <p><strong>Diện tích:</strong> ${data.area.toLocaleString()} km²</p>
+                <p><strong>Mật độ dân số:</strong> ${data.density.toLocaleString()} người/km²</p>
+                <p><strong>Thu nhập bình quân:</strong> ${currencyFormat}</p>
+            </div>
+
+            ${grdpInfo}
+
+            ${
+                 data.sectors && data.sectors.length > 0
+                      ? `
+                <div style="margin-bottom: 10px;">
+                    <p><strong>Các ngành chính:</strong></p>
+                    <ul style="list-style-type: disc; margin-left: 20px; margin-bottom: 5px;">
+                        ${data.sectors.map((sector) => `<li>${sector}</li>`).join('')}
+                    </ul>
+                </div>
+            `
+                      : ''
+            }
+
+            ${
+                 data.trends && data.trends.length > 0
+                      ? `
+                <div style="margin-bottom: 10px;">
+                    <p><strong>Xu hướng phát triển:</strong></p>
+                    <ul style="list-style-type: disc; margin-left: 20px; margin-bottom: 5px;">
+                        ${data.trends.map((trend) => `<li>${trend}</li>`).join('')}
+                    </ul>
+                </div>
+            `
+                      : ''
+            }
+
+            ${
+                 data.opportunities
+                      ? `
+                <div style="margin-bottom: 10px;">
+                    <p><strong>Cơ hội chính:</strong> ${data.opportunities}</p>
+                </div>
+            `
+                      : ''
+            }
+
+            ${
+                 data.challenges
+                      ? `
+                <div style="margin-bottom: 10px;">
+                    <p><strong>Thách thức chính:</strong> ${data.challenges}</p>
+                </div>
+            `
+                      : ''
+            }
+
+            <div style="font-size: 12px; color: #666; margin-top: 5px; margin-bottom: 15px;">
+                <p>Vĩ độ: ${data.coordinates[0]}</p>
+                <p>Kinh độ: ${data.coordinates[1]}</p>
+            </div>
+
+            <div style="display: flex; gap: 10px; justify-content: center;">
+                <button onclick="showBusinessAnalysis('${locationName}', ${countryCode === 'VN'})" 
+                        class="analyze-business-btn">
+                    <i class="material-icons">lightbulb</i>
+                    Phân tích ý tưởng kinh doanh
+                </button>
+            </div>
+        </div>
+    `;
+               }
+
+               // History Management Functions
+               function getSearchHistory() {
+                    const history = localStorage.getItem(config.SEARCH_HISTORY_KEY);
+                    return history ? JSON.parse(history) : [];
+               }
+
+               function saveSearchPoint(point) {
+                    let history = getSearchHistory();
+                    history = history.filter((item) => item.lat !== point.lat || item.lng !== point.lng);
+                    history.unshift(point);
+                    if (history.length > config.MAX_HISTORY_ITEMS) {
+                         history = history.slice(0, config.MAX_HISTORY_ITEMS);
+                    }
+                    localStorage.setItem(config.SEARCH_HISTORY_KEY, JSON.stringify(history));
+                    updateHistoryPanel();
+               }
+
+               function updateHistoryPanel() {
+                    const historyList = document.getElementById('history-list');
+                    const history = getSearchHistory();
+
+                    historyList.innerHTML = history
+                         .map(
+                              (point, index) => `
+                <div class="history-item">
+                    <div style="flex: 1; cursor: pointer;" onclick="jumpToHistoryPoint(${index})">
+                        <strong>${point.name}</strong>
+                        <div style="font-size: 12px; color: #666;">
+                            ${point.lat.toFixed(4)}, ${point.lng.toFixed(4)}
+                        </div>
+                    </div>
+                    <button onclick="deleteHistoryItem(${index})" title="Xóa điểm này">
+                        <span class="material-icons">close</span>
+                    </button>
+                </div>
+            `,
+                         )
+                         .join('');
+               }
+
+               function jumpToHistoryPoint(index) {
+                    const history = getSearchHistory();
+                    const point = history[index];
+
+                    if (!point) return;
+
+                    if (searchMarker) {
+                         map.removeLayer(searchMarker);
+                    }
+
+                    const popupContent = createSearchResultPopup(point);
+                    searchMarker = L.marker([point.lat, point.lng], {
+                         title: point.name,
+                    })
+                         .bindPopup(popupContent)
+                         .addTo(map);
+
+                    updateMapView(point);
+                    searchMarker.openPopup();
+
+                    const historyPanel = document.getElementById('history-panel');
+                    const toggleHistoryBtn = document.getElementById('toggleHistory');
+                    historyPanel.classList.remove('visible');
+                    toggleHistoryBtn.classList.remove('active');
+               }
+
+               function createBusinessPopup(analysis) {
+                    return `
+        <div class="business-analysis-popup">
+            <h4>${analysis.businessIdea.name}</h4>
+            
+            <div class="business-section">
+                <div class="business-section-title">Mô tả</div>
+                <p>${analysis.businessIdea.description}</p>
+            </div>
+
+            <div class="business-section">
+                <div class="business-section-title">Mô hình kinh doanh</div>
+                <p><strong>Tổng quan:</strong> ${analysis.businessIdea.businessModel.overview}</p>
+                <p><strong>Khách hàng mục tiêu:</strong> ${analysis.businessIdea.businessModel.targetCustomer}</p>
+                <p><strong>Giá trị mang lại:</strong> ${analysis.businessIdea.businessModel.valueProposition}</p>
+                <p><strong>Nguồn thu:</strong> ${analysis.businessIdea.businessModel.revenueStreams}</p>
+            </div>
+
+            <div class="business-section">
+                <div class="business-section-title">Thách thức và Giải pháp</div>
+                ${analysis.businessIdea.challenges
+                     .map(
+                          (item) => `
+                    <div class="challenge-item">
+                        <p><strong>Thách thức:</strong> ${item.challenge}</p>
+                        <p><strong>Giải pháp:</strong> ${item.solution}</p>
+                    </div>
+                `,
+                     )
+                     .join('')}
+            </div>
+
+            <div class="business-section">
+                <div class="business-section-title">Các bước triển khai</div>
+                ${analysis.businessIdea.implementationSteps
+                     .map(
+                          (step, index) => `
+                    <div class="implementation-step">
+                        <div class="step-number">${index + 1}</div>
+                        <div>${step}</div>
+                    </div>
+                `,
+                     )
+                     .join('')}
+            </div>
+
+            <div style="margin-top: 15px; display: flex; gap: 10px; justify-content: center;">
+                <button onclick="showBusinessHistory(${locationData.lat}, ${locationData.lng})" 
+                        class="analyze-business-btn" style="background-color: #2196F3;">
+                    <i class="material-icons">history</i>
+                    Xem lịch sử ý tưởng
+                </button>
+                <button onclick="showSearchBusinessAnalysis(window.tempLocationData)" 
+                        class="analyze-business-btn">
+                    <i class="material-icons">add_circle</i>
+                    Tạo ý tưởng mới
+                </button>
+            </div>
+        </div>
+    `;
+               }
+
+               function validateBusinessAnalysis(data) {
+                    if (!data || !data.businessIdea) {
+                         throw new Error('Dữ liệu phân tích không hợp lệ');
+                    }
+
+                    const required = {
+                         businessIdea: ['name', 'description', 'businessModel', 'challenges', 'implementationSteps'],
+                         businessModel: ['overview', 'targetCustomer', 'valueProposition', 'revenueStreams'],
+                    };
+
+                    // Validate business idea fields
+                    for (const field of required.businessIdea) {
+                         if (!data.businessIdea[field]) {
+                              throw new Error(`Thiếu thông tin: ${field}`);
+                         }
+                    }
+
+                    // Validate business model fields
+                    for (const field of required.businessModel) {
+                         if (!data.businessIdea.businessModel[field]) {
+                              throw new Error(`Thiếu thông tin mô hình kinh doanh: ${field}`);
+                         }
+                    }
+
+                    // Ensure arrays exist and are properly formatted
+                    if (!Array.isArray(data.businessIdea.challenges)) {
+                         data.businessIdea.challenges = [];
+                    }
+
+                    if (!Array.isArray(data.businessIdea.implementationSteps)) {
+                         data.businessIdea.implementationSteps = [];
+                    }
+
+                    return true;
+               }
+
+               function deleteHistoryItem(index) {
+                    let history = getSearchHistory();
+                    const point = history[index];
+
+                    if (confirm(`Bạn có chắc muốn xóa điểm "${point.name}" khỏi lịch sử?`)) {
+                         if (searchMarker && searchMarker.getLatLng().lat === point.lat && searchMarker.getLatLng().lng === point.lng) {
+                              map.removeLayer(searchMarker);
+                         }
+                         history.splice(index, 1);
+                         localStorage.setItem(config.SEARCH_HISTORY_KEY, JSON.stringify(history));
+                         updateHistoryPanel();
+                    }
+               }
+
+               function clearHistory() {
+                    if (confirm('Bạn có chắc muốn xóa tất cả lịch sử tìm kiếm?')) {
+                         localStorage.removeItem(config.SEARCH_HISTORY_KEY);
+                         if (searchMarker) {
+                              map.removeLayer(searchMarker);
+                         }
+                         markers.clear();
+                         updateHistoryPanel();
+                    }
+               }
+
+               // Initialize application
+               document.addEventListener('DOMContentLoaded', function () {
+                    initializeMap();
+                    initializeControls();
+                    initializeCountriesPanel();
+                    updateHistoryPanel();
+                    loadProvinceData();
+               });
+          </script>
+     </body>
+</html>
