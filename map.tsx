@@ -1,11 +1,21 @@
 'use client';
-import { useEffect, useState } from 'react';
-import L from 'leaflet';
+import { forwardRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import L, { Content } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-draw';
 import 'leaflet-geometryutil';
 import 'leaflet-draw/dist/leaflet.draw.css';
-import { formatLatLng, cleanJsonText, parseGRDPData, getUsedIndustries, saveUsedIndustry, parseCSV, parseUSCSV, determineLocationType } from './utils';
+import {
+     formatLatLng,
+     cleanJsonText,
+     parseGRDPData,
+     getUsedIndustries,
+     saveUsedIndustry,
+     parseCSV,
+     parseUSCSV,
+     determineLocationType,
+} from './utils';
 import '@/public/style/map-industry.css';
 import { config } from './config';
 import { GeminiAnalysisService, analyzeBusinessIdea } from './service';
@@ -65,7 +75,7 @@ type ChildProps = {
      className?: string;
 };
 
-const MapIndustry: React.FC<ChildProps> = ({ className }) => {
+const MapIndustry = forwardRef<HTMLDivElement, { className?: string }>((props, ref) => {
      // Xác định đường dẫn chính xác
      L.Icon.Default.mergeOptions({
           iconUrl: '/marker-icon.png',
@@ -84,10 +94,6 @@ const MapIndustry: React.FC<ChildProps> = ({ className }) => {
           { name: 'Việt Nam', code: 'VN' },
           { name: 'Mỹ', code: 'US' },
      ];
-
-     useEffect(() => {
-          console.log('searchMarker', searchMarker);
-     }, [searchMarker]);
 
      // Data Loading Functions
      async function loadProvinceData() {
@@ -193,7 +199,6 @@ const MapIndustry: React.FC<ChildProps> = ({ className }) => {
 
           // Thêm xử lý sự kiện cho nút Pin
           pinButton.addEventListener('click', function () {
-               console.log('searchMarker', searchMarker);
                isPinMode = !isPinMode;
                this.classList.toggle('active');
 
@@ -213,7 +218,10 @@ const MapIndustry: React.FC<ChildProps> = ({ className }) => {
                     const lng = e.latlng.lng;
 
                     // Hiển thị loading popup
-                    const loadingPopup = L.popup().setLatLng(e.latlng).setContent('<div style="text-align: center; padding: 20px;">Đang phân tích địa điểm...</div>').openOn(map);
+                    const loadingPopup = L.popup()
+                         .setLatLng(e.latlng)
+                         .setContent('<div style="text-align: center; padding: 20px;">Đang phân tích địa điểm...</div>')
+                         .openOn(map);
 
                     // Lấy thông tin địa điểm từ tọa độ
                     const locationInfo = await getLocationInfo(lat, lng);
@@ -235,7 +243,6 @@ const MapIndustry: React.FC<ChildProps> = ({ className }) => {
 
                     // Lưu vào lịch sử
                     saveSearchPoint(locationData);
-                    console.log('searchMarker', searchMarker);
                     // Đóng loading popup và mở popup kết quả
                     map.closePopup(loadingPopup);
                     searchMarker.openPopup();
@@ -339,7 +346,9 @@ Chỉ trả về theo định dạng JSON sau, không thêm text nào khác:
      // Hàm lấy thông tin địa điểm từ tọa độ
      async function getLocationInfo(lat: any, lng: any) {
           try {
-               const response = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&accept-language=vi`);
+               const response = await fetch(
+                    `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&accept-language=vi`,
+               );
 
                if (!response.ok) {
                     throw new Error('Không thể lấy thông tin địa điểm');
@@ -484,7 +493,16 @@ Trả về kết quả theo định dạng JSON:
      // Hàm hỗ trợ phân tích ý tưởng
      function extractMainCategory(name: string) {
           // Rút trích lĩnh vực chính từ tên ý tưởng
-          const categories = ['dịch vụ', 'sản xuất', 'thương mại', 'du lịch', 'công nghệ', 'giáo dục', 'y tế', 'nông nghiệp'];
+          const categories = [
+               'dịch vụ',
+               'sản xuất',
+               'thương mại',
+               'du lịch',
+               'công nghệ',
+               'giáo dục',
+               'y tế',
+               'nông nghiệp',
+          ];
           return categories.find((cat) => name.toLowerCase().includes(cat)) || 'khác';
      }
 
@@ -543,7 +561,9 @@ Trả về kết quả theo định dạng JSON:
 
           async getLocationName(center: L.LatLng) {
                try {
-                    const response = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${center.lat}&lon=${center.lng}&format=json&accept-language=vi`);
+                    const response = await fetch(
+                         `https://nominatim.openstreetmap.org/reverse?lat=${center.lat}&lon=${center.lng}&format=json&accept-language=vi`,
+                    );
 
                     if (!response.ok) {
                          throw new Error('Không thể lấy thông tin địa điểm');
@@ -580,15 +600,26 @@ Trả về kết quả theo định dạng JSON:
                               const center = bounds.getCenter();
                               const area = this.calculateRectangleArea(bounds);
                               if (this.map) {
-                                   const loadingPopup = L.popup().setLatLng(center).setContent('<div class="loading">Đang phân tích...</div>').openOn(this.map);
+                                   const loadingPopup = L.popup()
+                                        .setLatLng(center)
+                                        .setContent('<div class="loading">Đang phân tích...</div>')
+                                        .openOn(this.map);
 
                                    const locationName = await this.getLocationName(center);
 
-                                   const analysisResult = await GeminiAnalysisService.analyzeRegion([center.lat, center.lng], area / 1000000);
+                                   const analysisResult = await GeminiAnalysisService.analyzeRegion(
+                                        [center.lat, center.lng],
+                                        area / 1000000,
+                                   );
 
                                    this.map?.closePopup(loadingPopup);
 
-                                   const popupContent = this.createAnalysisPopup(analysisResult, area, bounds, locationName);
+                                   const popupContent = this.createAnalysisPopup(
+                                        analysisResult,
+                                        area,
+                                        bounds,
+                                        locationName,
+                                   );
 
                                    layer.bindPopup(popupContent, {
                                         maxWidth: 400,
@@ -597,7 +628,9 @@ Trả về kết quả theo định dạng JSON:
                               }
                          } catch (error: any) {
                               console.error('Analysis error:', error);
-                              layer.bindPopup(`<div class="error-popup">Lỗi phân tích khu vực: ${error.message}</div>`).openPopup();
+                              layer.bindPopup(
+                                   `<div class="error-popup">Lỗi phân tích khu vực: ${error.message}</div>`,
+                              ).openPopup();
                          }
                     }
                });
@@ -899,6 +932,9 @@ Trả về kết quả theo định dạng JSON:
 
      // Map Initialization and Control Functions
      function initializeMap() {
+          const mapContainer = document.getElementById('map');
+          if (!mapContainer || typeof window === 'undefined') return;
+
           map = L.map('map', {
                center: [16.047079, 108.20623],
                zoom: 12,
@@ -909,13 +945,53 @@ Trả về kết quả theo định dạng JSON:
                maxZoom: 19,
           }).addTo(map);
 
-          L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', {
-               attribution: 'Labels &copy; Esri',
-               maxZoom: 19,
-          }).addTo(map);
+          L.tileLayer(
+               'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',
+               {
+                    attribution: 'Labels &copy; Esri',
+                    maxZoom: 19,
+               },
+          ).addTo(map);
 
           AreaAnalysis.initialize(map);
+
+          map.on('popupopen', function (e: any) {
+               // Gán lại các sự kiện cho các phần tử bên trong popup
+               setTimeout(() => {
+                    const analyzeBusinessBtn = document.getElementById('analyze-business-btn') as HTMLButtonElement;
+                    if (analyzeBusinessBtn) {
+                         analyzeBusinessBtn.addEventListener('click', () => handleSearchBusinessAnalysis());
+                    }
+                    const showBusinessHistoryBtn = document.getElementById(
+                         'show-business-history-btn',
+                    ) as HTMLButtonElement;
+                    if (showBusinessHistoryBtn) {
+                         showBusinessHistoryBtn.addEventListener('click', () =>
+                              showBusinessHistory(searchMarker.getLatLng().lat, searchMarker.getLatLng().lng),
+                         );
+                    }
+                    const handleSearchBusinessAnalysisBtn = document.getElementById(
+                         'handle-search-business-btn',
+                    ) as HTMLButtonElement;
+                    if (handleSearchBusinessAnalysisBtn) {
+                         handleSearchBusinessAnalysisBtn.addEventListener('click', () =>
+                              handleSearchBusinessAnalysis(),
+                         );
+                    }
+                    // const showDistrictBtn = document.getElementById('show-district-btn') as HTMLButtonElement;
+                    // if (showDistrictBtn) {
+                    //      showDistrictBtn.addEventListener('click', () => {
+                    //           console.log('Hes');
+                    //      });
+                    // }
+                    // const showBusinessBtn = document.getElementById('show-business-btn');
+                    // if (showBusinessBtn) {
+                    //      showBusinessBtn.addEventListener('click', () => showBusinessAnalysis(locationName, isVietnam));
+                    // }
+               }, 0);
+          });
      }
+
      async function searchLocation() {
           const searchInput = document.getElementById('searchInput') as HTMLInputElement;
           const loadingSpan = document.getElementById('loading') as HTMLSpanElement;
@@ -926,7 +1002,9 @@ Trả về kết quả theo định dạng JSON:
                loadingSpan.style.display = 'inline';
 
                // Thử tìm kiếm với từ khóa Việt Nam trước
-               let nominatimResponse = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(searchTerm + ' Việt Nam')}&format=json&limit=1&countrycodes=vn`);
+               let nominatimResponse = await fetch(
+                    `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(searchTerm + ' Việt Nam')}&format=json&limit=1&countrycodes=vn`,
+               );
 
                if (!nominatimResponse.ok) {
                     throw new Error('Không thể kết nối đến dịch vụ tìm kiếm');
@@ -935,7 +1013,9 @@ Trả về kết quả theo định dạng JSON:
                let nominatimData = await nominatimResponse.json();
                // Nếu không tìm thấy, thử tìm không giới hạn quốc gia
                if (!nominatimData || nominatimData.length === 0) {
-                    nominatimResponse = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(searchTerm)}&format=json&limit=1`);
+                    nominatimResponse = await fetch(
+                         `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(searchTerm)}&format=json&limit=1`,
+                    );
                     nominatimData = await nominatimResponse.json();
                }
 
@@ -1032,15 +1112,23 @@ Trả về kết quả theo định dạng JSON:
      }
 
      async function showBusinessAnalysis(locationName: string, isVietnam: boolean) {
+          console.log('DATA::', locationName, isVietnam);
           const locationData = isVietnam ? provinceData[locationName] : usData[locationName];
           if (!locationData) return;
 
           try {
                // Hiển thị loading
-               const loadingPopup = L.popup().setLatLng(locationData.coordinates).setContent('<div style="text-align: center; padding: 20px;">Đang phân tích ý tưởng kinh doanh...</div>').openOn(map);
+               const loadingPopup = L.popup()
+                    .setLatLng(locationData.coordinates)
+                    .setContent(
+                         '<div style="text-align: center; padding: 20px;">Đang phân tích ý tưởng kinh doanh...</div>',
+                    )
+                    .openOn(map);
 
-               const analysis = await analyzeBusinessIdea({ ...locationData, name: locationName }, isVietnam ? 'VN' : 'US');
-
+               const analysis = await analyzeBusinessIdea(
+                    { ...locationData, name: locationName },
+                    isVietnam ? 'VN' : 'US',
+               );
                // Lưu ý tưởng mới
                const ideaId = saveBusinessIdea(
                     {
@@ -1053,7 +1141,12 @@ Trả về kết quả theo định dạng JSON:
                );
 
                // Kiểm tra xem có ý tưởng trước đó không
-               const previousIdeas = getBusinessIdeasHistory().filter((item: any) => item.location.name === locationName && Math.abs(item.location.lat - locationData.coordinates[0]) < 0.0001 && Math.abs(item.location.lng - locationData.coordinates[1]) < 0.0001);
+               const previousIdeas = getBusinessIdeasHistory().filter(
+                    (item: any) =>
+                         item.location.name === locationName &&
+                         Math.abs(item.location.lat - locationData.coordinates[0]) < 0.0001 &&
+                         Math.abs(item.location.lng - locationData.coordinates[1]) < 0.0001,
+               );
 
                // Tạo nội dung popup phân tích
                const popupContent = `
@@ -1102,13 +1195,13 @@ Trả về kết quả theo định dạng JSON:
       </div>
 
       <div style="margin-top: 15px; display: flex; gap: 10px; justify-content: center;">
-          // <button id="show-business-history-btn"  
-                  class="analyze-business-btn" style="background-color: #2196F3;">
-              <svg fill="#000000" width="64px" height="64px" viewBox="-1 0 19 19" xmlns="http://www.w3.org/2000/svg" class="cf-icon-svg"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"><path d="M16.417 9.583A7.917 7.917 0 1 1 8.5 1.666a7.917 7.917 0 0 1 7.917 7.917zm-2.787.06a5.076 5.076 0 0 0-7.6-4.401 5.11 5.11 0 0 0-1.252 1.015V5.57a.396.396 0 0 0-.792 0v1.66a.396.396 0 0 0 .396.395H6.04a.396.396 0 0 0 0-.791h-.717A4.274 4.274 0 0 1 8.556 5.36a4.282 4.282 0 1 1-4.283 4.283.396.396 0 0 0-.792 0 5.074 5.074 0 1 0 10.15 0zm-4.763-.099V6.872a.396.396 0 0 0-.791 0v2.841a.395.395 0 0 0 .153.313l1.537 1.536a.396.396 0 1 0 .56-.56z"></path></g></svg>
+          <button id="show-business-history-btn"  
+                  class="analyze-business-btn" style="background-color: #2196F3;width: 50%;">
+              <svg fill="#000000" width="16px" height="16px" viewBox="-1 0 19 19" xmlns="http://www.w3.org/2000/svg" class="cf-icon-svg"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"><path d="M16.417 9.583A7.917 7.917 0 1 1 8.5 1.666a7.917 7.917 0 0 1 7.917 7.917zm-2.787.06a5.076 5.076 0 0 0-7.6-4.401 5.11 5.11 0 0 0-1.252 1.015V5.57a.396.396 0 0 0-.792 0v1.66a.396.396 0 0 0 .396.395H6.04a.396.396 0 0 0 0-.791h-.717A4.274 4.274 0 0 1 8.556 5.36a4.282 4.282 0 1 1-4.283 4.283.396.396 0 0 0-.792 0 5.074 5.074 0 1 0 10.15 0zm-4.763-.099V6.872a.396.396 0 0 0-.791 0v2.841a.395.395 0 0 0 .153.313l1.537 1.536a.396.396 0 1 0 .56-.56z"></path></g></svg>
               Xem lịch sử ý tưởng
           </button>
-          <button id="show-business-btn" class="analyze-business-btn" style="background-color: #4CAF50;">
-              <svg width="64px" height="64px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <path fill-rule="evenodd" clip-rule="evenodd" d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22ZM12.75 9C12.75 8.58579 12.4142 8.25 12 8.25C11.5858 8.25 11.25 8.58579 11.25 9L11.25 11.25H9C8.58579 11.25 8.25 11.5858 8.25 12C8.25 12.4142 8.58579 12.75 9 12.75H11.25V15C11.25 15.4142 11.5858 15.75 12 15.75C12.4142 15.75 12.75 15.4142 12.75 15L12.75 12.75H15C15.4142 12.75 15.75 12.4142 15.75 12C15.75 11.5858 15.4142 11.25 15 11.25H12.75V9Z" fill="#1C274C"></path> </g></svg>
+          <button id="show-business-btn" class="analyze-business-btn" style="background-color: #4CAF50;width: 50%;">
+              <svg width="16px" height="16px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <path fill-rule="evenodd" clip-rule="evenodd" d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22ZM12.75 9C12.75 8.58579 12.4142 8.25 12 8.25C11.5858 8.25 11.25 8.58579 11.25 9L11.25 11.25H9C8.58579 11.25 8.25 11.5858 8.25 12C8.25 12.4142 8.58579 12.75 9 12.75H11.25V15C11.25 15.4142 11.5858 15.75 12 15.75C12.4142 15.75 12.75 15.4142 12.75 15L12.75 12.75H15C15.4142 12.75 15.75 12.4142 15.75 12C15.75 11.5858 15.4142 11.25 15 11.25H12.75V9Z" fill="#1C274C"></path> </g></svg>
               Tạo ý tưởng mới
           </button>
       </div>
@@ -1117,11 +1210,19 @@ Trả về kết quả theo định dạng JSON:
                setTimeout(() => {
                     const showBusinessHistoryBtn = document.getElementById('show-business-history-btn');
                     if (showBusinessHistoryBtn) {
-                         showBusinessHistoryBtn.addEventListener('click', () => showBusinessHistory(locationData.coordinates[0], locationData.coordinates[1]));
+                         showBusinessHistoryBtn.addEventListener('click', () =>
+                              showBusinessHistory(locationData.coordinates[0], locationData.coordinates[1]),
+                         );
                     }
                     const showBusinessBtn = document.getElementById('show-business-btn');
                     if (showBusinessBtn) {
-                         showBusinessBtn.addEventListener('click', () => showBusinessAnalysis(locationName, isVietnam));
+                         console.log('có');
+                         showBusinessBtn.addEventListener('click', () => {
+                              console.log('click');
+                              showBusinessAnalysis(locationName, isVietnam);
+                         });
+                    } else {
+                         console.log('Không có');
                     }
                }, 0);
 
@@ -1334,13 +1435,16 @@ Hãy phân tích và trả về kết quả theo định dạng JSON sau:
                     revenueStreams: analysis.businessIdea.businessModel?.revenueStreams || '',
                },
                challenges: Array.isArray(analysis.businessIdea.challenges) ? analysis.businessIdea.challenges : [],
-               implementationSteps: Array.isArray(analysis.businessIdea.implementationSteps) ? analysis.businessIdea.implementationSteps : [],
+               implementationSteps: Array.isArray(analysis.businessIdea.implementationSteps)
+                    ? analysis.businessIdea.implementationSteps
+                    : [],
           };
 
           return analysis;
      }
 
      async function showSearchBusinessAnalysis(locationData: any) {
+          console.log('locationData', locationData);
           try {
                // Validate input data
                if (!locationData || !locationData.lat || !locationData.lng || !locationData.name) {
@@ -1360,10 +1464,20 @@ Hãy phân tích và trả về kết quả theo định dạng JSON sau:
                window.tempLocationData = { ...locationData };
 
                // Show loading popup
-               const loadingPopup = L.popup().setLatLng([locationData.lat, locationData.lng]).setContent('<div style="text-align: center; padding: 20px;">Đang phân tích ý tưởng kinh doanh...</div>').openOn(map);
+               const loadingPopup = L.popup()
+                    .setLatLng([locationData.lat, locationData.lng])
+                    .setContent(
+                         '<div style="text-align: center; padding: 20px;">Đang phân tích ý tưởng kinh doanh...</div>',
+                    )
+                    .openOn(map);
                try {
                     // Get previous ideas for this location
-                    const previousIdeas = getBusinessIdeasHistory().filter((item: any) => item.location && item.location.lat === locationData.lat && item.location.lng === locationData.lng);
+                    const previousIdeas = getBusinessIdeasHistory().filter(
+                         (item: any) =>
+                              item.location &&
+                              item.location.lat === locationData.lat &&
+                              item.location.lng === locationData.lng,
+                    );
 
                     // Create prompt and get analysis
                     const prompt = createBusinessPrompt(locationData, previousIdeas);
@@ -1424,7 +1538,7 @@ Hãy phân tích và trả về kết quả theo định dạng JSON sau:
 
           <div style="margin-top: 15px; display: flex; gap: 10px; justify-content: center;">
               <button id="show-history-btn" class="analyze-business-btn" style="background-color: #2196F3;">
-                  <svg width="64px" height="64px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <g clip-path="url(#clip0_429_11075)"> <path d="M5.63606 18.3639C9.15077 21.8786 14.8493 21.8786 18.364 18.3639C21.8787 14.8492 21.8787 9.1507 18.364 5.63598C14.8493 2.12126 9.15077 2.12126 5.63606 5.63598C3.87757 7.39447 2.99889 9.6996 3.00002 12.0044L3 13.9999" stroke="#292929" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></path> <path d="M1 11.9999L3 13.9999L5 11.9999" stroke="#292929" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></path> <path d="M11 7.99994L11 12.9999L16 12.9999" stroke="#292929" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></path> </g> <defs> <clipPath id="clip0_429_11075"> <rect width="24" height="24" fill="white"></rect> </clipPath> </defs> </g></svg>
+                  <svg width="16px" height="16px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <g clip-path="url(#clip0_429_11075)"> <path d="M5.63606 18.3639C9.15077 21.8786 14.8493 21.8786 18.364 18.3639C21.8787 14.8492 21.8787 9.1507 18.364 5.63598C14.8493 2.12126 9.15077 2.12126 5.63606 5.63598C3.87757 7.39447 2.99889 9.6996 3.00002 12.0044L3 13.9999" stroke="#292929" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></path> <path d="M1 11.9999L3 13.9999L5 11.9999" stroke="#292929" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></path> <path d="M11 7.99994L11 12.9999L16 12.9999" stroke="#292929" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></path> </g> <defs> <clipPath id="clip0_429_11075"> <rect width="24" height="24" fill="white"></rect> </clipPath> </defs> </g></svg>
                   Xem lịch sử ý tưởng
               </button>
               <button id="handle-search-business-btn" class="analyze-business-btn">
@@ -1440,12 +1554,18 @@ Hãy phân tích và trả về kết quả theo định dạng JSON sau:
                     setTimeout(() => {
                          const showHistoryBtn = document.getElementById('show-history-btn') as HTMLButtonElement;
                          if (showHistoryBtn) {
-                              showHistoryBtn.addEventListener('click', () => showBusinessHistory(locationData.lat, locationData.lng));
+                              showHistoryBtn.addEventListener('click', () => {
+                                   showBusinessHistory(locationData.lat, locationData.lng);
+                              });
                          }
-                         const handleSearchBusinessAnalysisBtn = document.getElementById('handle-search-business-btn') as HTMLButtonElement;
-                         if (handleSearchBusinessAnalysisBtn) {
-                              handleSearchBusinessAnalysisBtn.addEventListener('click', () => handleSearchBusinessAnalysis());
-                         }
+                         // const handleSearchBusinessAnalysisBtn = document.getElementById(
+                         //      'handle-search-business-btn',
+                         // ) as HTMLButtonElement;
+                         // if (handleSearchBusinessAnalysisBtn) {
+                         //      handleSearchBusinessAnalysisBtn.addEventListener('click', () =>
+                         //           handleSearchBusinessAnalysis(),
+                         //      );
+                         // }
                     }, 0);
 
                     // Close loading popup and show result
@@ -1464,7 +1584,9 @@ Hãy phân tích và trả về kết quả theo định dạng JSON sau:
      }
 
      function showBusinessHistory(lat: number, lng: number) {
-          const ideas = getBusinessIdeasHistory().filter((item: any) => item.location.lat === lat && item.location.lng === lng);
+          const ideas = getBusinessIdeasHistory().filter(
+               (item: any) => item.location.lat === lat && item.location.lng === lng,
+          );
 
           if (ideas.length === 0) {
                alert('Chưa có ý tưởng nào được tạo cho địa điểm này.');
@@ -1595,7 +1717,9 @@ Hãy phân tích và trả về kết quả theo định dạng JSON sau:
           setTimeout(() => {
                const showHistoryBtn = document.getElementById('show-history-btn') as HTMLButtonElement;
                if (showHistoryBtn) {
-                    showHistoryBtn.addEventListener('click', () => showBusinessHistory(idea.location.lat, idea.location.lng));
+                    showHistoryBtn.addEventListener('click', () =>
+                         showBusinessHistory(idea.location.lat, idea.location.lng),
+                    );
                }
                const deleteIdeaBtn = document.getElementById('delete-idea-btn') as HTMLButtonElement;
                if (deleteIdeaBtn) {
@@ -1978,6 +2102,7 @@ Hãy phân tích và trả về kết quả theo định dạng JSON sau:
                               locationDiv.querySelectorAll('.district-item').forEach((districtDiv) => {
                                    districtDiv.addEventListener('click', function (e) {
                                         e.stopPropagation();
+
                                         const target = e.currentTarget as HTMLElement;
                                         const lat = parseFloat(target.dataset.lat || '0');
                                         const lng = parseFloat(target.dataset.lng || '0');
@@ -1990,50 +2115,55 @@ Hãy phân tích và trả về kết quả theo định dạng JSON sau:
                                         if (markers.has(districtName)) {
                                              map.removeLayer(markers.get(districtName));
                                         }
-
                                         const marker = L.marker([lat, lng])
                                              .addTo(map)
                                              .bindPopup(
                                                   `
-      <div style="min-width: 200px;">
-          <h3 style="color: #2196F3; margin-bottom: 8px;">${districtName}</h3>
-          <p style="color: #666;">Thuộc ${location}</p>
-          <div style="margin-top: 8px;">
-              <p>Vĩ độ: ${lat.toFixed(6)}</p>
-              <p>Kinh độ: ${lng.toFixed(6)}</p>
-          </div>
-          <button id="show-district-btn"
-                  style="
-                      margin-top: 10px;locationDiv.querySelector('.province-header').addEventListener('click', function () {
-                         zoomToLocation(location, 'US');
-                         document.getElementById('countries-panel').classList.remove('visible');
-                         document.getElementById('toggleCountries').classList.remove('active');
-                    });
-                      width: 100%;
-                      padding: 8px 12px;
-                      background: linear-gradient(135deg, #64B5F6 0%, #F48FB1 100%);
-                      border: none;
-                      border-radius: 4px;
-                      color: #333;
-                      cursor: pointer;
-                      display: flex;
-                      align-items: center;
-                      gap: 8px;
-                      justify-content: center;
-                      font-size: 14px;
-                      transition: all 0.3s ease;
-                  ">
-              <svg width="16px" height="16px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <path d="M7 16H8M11.5 16H12.5M16 16H17M18.4 20H5.6C5.03995 20 4.75992 20 4.54601 19.891C4.35785 19.7951 4.20487 19.6422 4.10899 19.454C4 19.2401 4 18.9601 4 18.4V4.8C4 4.51997 4 4.37996 4.0545 4.273C4.10243 4.17892 4.17892 4.10243 4.273 4.0545C4.37996 4 4.51997 4 4.8 4H7.2C7.48003 4 7.62004 4 7.727 4.0545C7.82108 4.10243 7.89757 4.17892 7.9455 4.273C8 4.37996 8 4.51997 8 4.8V9.06863C8 9.67445 8 9.97735 8.1198 10.1176C8.22374 10.2393 8.37967 10.3039 8.53923 10.2914C8.72312 10.2769 8.93731 10.0627 9.36569 9.63431L12.6343 6.36569C13.0627 5.93731 13.2769 5.72312 13.4608 5.70865C13.6203 5.69609 13.7763 5.76068 13.8802 5.88238C14 6.02265 14 6.32556 14 6.93137V9.06863C14 9.67445 14 9.97735 14.1198 10.1176C14.2237 10.2393 14.3797 10.3039 14.5392 10.2914C14.7231 10.2769 14.9373 10.0627 15.3657 9.63431L18.6343 6.36569C19.0627 5.93731 19.2769 5.72312 19.4608 5.70865C19.6203 5.69609 19.7763 5.76068 19.8802 5.88238C20 6.02265 20 6.32556 20 6.93137V18.4C20 18.9601 20 19.2401 19.891 19.454C19.7951 19.6422 19.6422 19.7951 19.454 19.891C19.2401 20 18.9601 20 18.4 20Z" stroke="#000000" stroke-width="2" stroke-linecap="round"></path> </g></svg>
-                  Phân tích khu vực
-          </button>
-      </div>
-  `,
+                                                  <div style="min-width: 200px;">
+                                                       <h3 style="color: #2196F3; margin-bottom: 8px;">${districtName}</h3>
+                                                       <p style="color: #666;">Thuộc ${location}</p>
+                                                       <div style="margin-top: 8px;">
+                                                       <p>Vĩ độ: ${lat.toFixed(6)}</p>
+                                                       <p>Kinh độ: ${lng.toFixed(6)}</p>
+                                                       </div>
+                                                       <button id="show-district-btn"
+                                                            style="
+                                                                 margin-top: 10px;locationDiv.querySelector('.province-header').addEventListener('click', function () {
+                                                                      zoomToLocation(location, 'US');
+                                                                      document.getElementById('countries-panel').classList.remove('visible');
+                                                                      document.getElementById('toggleCountries').classList.remove('active');
+                                                                 });
+                                                                 width: 100%;
+                                                                 padding: 8px 12px;
+                                                                 background: linear-gradient(135deg, #64B5F6 0%, #F48FB1 100%);
+                                                                 border: none;
+                                                                 border-radius: 4px;
+                                                                 color: #333;
+                                                                 cursor: pointer;
+                                                                 display: flex;
+                                                                 align-items: center;
+                                                                 gap: 8px;
+                                                                 justify-content: center;
+                                                                 font-size: 14px;
+                                                                 transition: all 0.3s ease;
+                                                            ">
+                                                       
+                                                       //    <svg width="16px" height="16px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <path d="M7 16H8M11.5 16H12.5M16 16H17M18.4 20H5.6C5.03995 20 4.75992 20 4.54601 19.891C4.35785 19.7951 4.20487 19.6422 4.10899 19.454C4 19.2401 4 18.9601 4 18.4V4.8C4 4.51997 4 4.37996 4.0545 4.273C4.10243 4.17892 4.17892 4.10243 4.273 4.0545C4.37996 4 4.51997 4 4.8 4H7.2C7.48003 4 7.62004 4 7.727 4.0545C7.82108 4.10243 7.89757 4.17892 7.9455 4.273C8 4.37996 8 4.51997 8 4.8V9.06863C8 9.67445 8 9.97735 8.1198 10.1176C8.22374 10.2393 8.37967 10.3039 8.53923 10.2914C8.72312 10.2769 8.93731 10.0627 9.36569 9.63431L12.6343 6.36569C13.0627 5.93731 13.2769 5.72312 13.4608 5.70865C13.6203 5.69609 13.7763 5.76068 13.8802 5.88238C14 6.02265 14 6.32556 14 6.93137V9.06863C14 9.67445 14 9.97735 14.1198 10.1176C14.2237 10.2393 14.3797 10.3039 14.5392 10.2914C14.7231 10.2769 14.9373 10.0627 15.3657 9.63431L18.6343 6.36569C19.0627 5.93731 19.2769 5.72312 19.4608 5.70865C19.6203 5.69609 19.7763 5.76068 19.8802 5.88238C20 6.02265 20 6.32556 20 6.93137V18.4C20 18.9601 20 19.2401 19.891 19.454C19.7951 19.6422 19.6422 19.7951 19.454 19.891C19.2401 20 18.9601 20 18.4 20Z" stroke="#000000" stroke-width="2" stroke-linecap="round"></path> </g></svg>
+                                                            Phân tích khu vực
+                                                       </button>
+                                                  </div>
+                                             `,
                                              )
                                              .openPopup();
+
                                         setTimeout(() => {
-                                             const showDistrictBtn = document.getElementById('show-district-btn') as HTMLButtonElement;
+                                             const showDistrictBtn = document.getElementById(
+                                                  'show-district-btn',
+                                             ) as HTMLButtonElement;
                                              if (showDistrictBtn) {
-                                                  showDistrictBtn.addEventListener('click', () => showDistrictAnalysis(districtName, location, lat, lng));
+                                                  showDistrictBtn.addEventListener('click', () => {
+                                                       showDistrictAnalysis(districtName, location, lat, lng);
+                                                  });
                                              }
                                         }, 0);
                                         markers.set(districtName, marker);
@@ -2067,7 +2197,7 @@ Hãy phân tích và trả về kết quả theo định dạng JSON sau:
                const districtResponse = await fetch('/quan_huyen.csv');
                const districtText = await districtResponse.text();
                districtsData = organizeDistrictsByProvince(districtText);
-               console.log('districtsData', districtsData);
+
                // Initialize other components
                initializeMap();
                initializeControls();
@@ -2106,7 +2236,7 @@ Hãy phân tích và trả về kết quả theo định dạng JSON sau:
           searchMarker = L.marker([locationData.lat, locationData.lng], {
                title: locationData.name,
           })
-               .bindPopup(popupContent)
+               .bindPopup(popupContent as Content)
                .addTo(map);
           return searchMarker;
      }
@@ -2118,8 +2248,9 @@ Hãy phân tích và trả về kết quả theo định dạng JSON sau:
           }
 
           // Kiểm tra xem có ý tưởng nào cho địa điểm này chưa
-          const hasExistingIdeas = getBusinessIdeasHistory().some((item: any) => item.location.lat === locationData.lat && item.location.lng === locationData.lng);
-          console.log('hasExistingIdeas', hasExistingIdeas);
+          const hasExistingIdeas = getBusinessIdeasHistory().some(
+               (item: any) => item.location.lat === locationData.lat && item.location.lng === locationData.lng,
+          );
           const popupContent = `
 <div class="analysis-popup">
   <h4>${locationData.name}</h4>
@@ -2182,7 +2313,7 @@ Hãy phân tích và trả về kết quả theo định dạng JSON sau:
            hasExistingIdeas
                 ? `
           <button id="show-business-history-btn" class="analyze-business-btn" style="background-color: #2196F3;">
-              <svg width="64px" height="64px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <g clip-path="url(#clip0_429_11075)"> <path d="M5.63606 18.3639C9.15077 21.8786 14.8493 21.8786 18.364 18.3639C21.8787 14.8492 21.8787 9.1507 18.364 5.63598C14.8493 2.12126 9.15077 2.12126 5.63606 5.63598C3.87757 7.39447 2.99889 9.6996 3.00002 12.0044L3 13.9999" stroke="#292929" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></path> <path d="M1 11.9999L3 13.9999L5 11.9999" stroke="#292929" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></path> <path d="M11 7.99994L11 12.9999L16 12.9999" stroke="#292929" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></path> </g> <defs> <clipPath id="clip0_429_11075"> <rect width="24" height="24" fill="white"></rect> </clipPath> </defs> </g></svg>
+              <svg width="16px" height="16px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <g clip-path="url(#clip0_429_11075)"> <path d="M5.63606 18.3639C9.15077 21.8786 14.8493 21.8786 18.364 18.3639C21.8787 14.8492 21.8787 9.1507 18.364 5.63598C14.8493 2.12126 9.15077 2.12126 5.63606 5.63598C3.87757 7.39447 2.99889 9.6996 3.00002 12.0044L3 13.9999" stroke="#292929" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></path> <path d="M1 11.9999L3 13.9999L5 11.9999" stroke="#292929" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></path> <path d="M11 7.99994L11 12.9999L16 12.9999" stroke="#292929" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></path> </g> <defs> <clipPath id="clip0_429_11075"> <rect width="24" height="24" fill="white"></rect> </clipPath> </defs> </g></svg>
               Xem lịch sử ý tưởng
           </button>
       `
@@ -2194,14 +2325,16 @@ Hãy phân tích và trả về kết quả theo định dạng JSON sau:
 
           // Sau khi nội dung được render, gán sự kiện
           setTimeout(() => {
-               const analyzeBusinessBtn = document.getElementById('analyze-business-btn') as HTMLButtonElement;
-               if (analyzeBusinessBtn) {
-                    analyzeBusinessBtn.addEventListener('click', () => handleSearchBusinessAnalysis());
-               }
+               // const analyzeBusinessBtn = document.getElementById('analyze-business-btn') as HTMLButtonElement;
+               // if (analyzeBusinessBtn) {
+               //      analyzeBusinessBtn.addEventListener('click', () => handleSearchBusinessAnalysis());
+               // }
 
                const showBusinessHistoryBtn = document.getElementById('show-business-history-btn') as HTMLButtonElement;
                if (showBusinessHistoryBtn) {
-                    showBusinessHistoryBtn.addEventListener('click', () => showBusinessHistory(locationData.lat, locationData.lng));
+                    showBusinessHistoryBtn.addEventListener('click', () =>
+                         showBusinessHistory(locationData.lat, locationData.lng),
+                    );
                }
           }, 0);
           return popupContent;
@@ -2242,7 +2375,11 @@ Hãy phân tích và trả về kết quả theo định dạng JSON sau:
           map.setView([locationData.lat, locationData.lng], zoomLevel);
      }
 
-     async function analyzeDistrict(districtName: string, provinceName: string, coordinates: { lat: number; lng: number }) {
+     async function analyzeDistrict(
+          districtName: string,
+          provinceName: string,
+          coordinates: { lat: number; lng: number },
+     ) {
           const prompt = `Phân tích quận/huyện ${districtName} thuộc ${provinceName} tại vị trí (${coordinates.lat}, ${coordinates.lng}).
 Chỉ trả về theo định dạng JSON sau, không thêm text nào khác:
 {
@@ -2304,7 +2441,11 @@ Lưu ý: Tôi là 1 người startup và hãy cho tôi những thông tin thực
           }
      }
 
-     function createDistrictPopup(districtName: string, provinceName: string, coordinates: { lat: number; lng: number }) {
+     function createDistrictPopup(
+          districtName: string,
+          provinceName: string,
+          coordinates: { lat: number; lng: number },
+     ) {
           const popupContent = `
 <div style="min-width: 300px;">
   <h3 style="color: #2196F3; margin-bottom: 8px;">${districtName}</h3>
@@ -2337,7 +2478,9 @@ Lưu ý: Tôi là 1 người startup và hãy cho tôi những thông tin thực
           setTimeout(() => {
                const showDistrictBtn = document.getElementById('show-district-btn') as HTMLButtonElement;
                if (showDistrictBtn) {
-                    showDistrictBtn.addEventListener('click', () => showDistrictAnalysis(districtName, provinceName, coordinates.lat, coordinates.lng));
+                    showDistrictBtn.addEventListener('click', () =>
+                         showDistrictAnalysis(districtName, provinceName, coordinates.lat, coordinates.lng),
+                    );
                }
           }, 0);
 
@@ -2345,9 +2488,13 @@ Lưu ý: Tôi là 1 người startup và hãy cho tôi những thông tin thực
      }
 
      async function showDistrictAnalysis(districtName: string, provinceName: string, lat: number, lng: number) {
+          console.log('districtName', districtName, 'provinceName', provinceName, lat, lng);
           try {
                // Hiển thị loading popup
-               const loadingPopup = L.popup().setLatLng([lat, lng]).setContent('<div style="text-align: center; padding: 20px;">Đang phân tích khu vực...</div>').openOn(map);
+               const loadingPopup = L.popup()
+                    .setLatLng([lat, lng])
+                    .setContent('<div style="text-align: center; padding: 20px;">Đang phân tích khu vực...</div>')
+                    .openOn(map);
 
                const prompt = `Với vai trò là một chuyên gia phân tích dữ liệu và quy hoạch đô thị tại Việt Nam, hãy phân tích chi tiết về ${districtName} thuộc ${provinceName}.
 
@@ -2595,12 +2742,16 @@ Lưu ý:
       </div>
   </div>
 `;
+
                setTimeout(() => {
                     const backDistrictBtn = document.getElementById('backTo-district-btn') as HTMLButtonElement;
                     if (backDistrictBtn) {
-                         backDistrictBtn.addEventListener('click', () => handleBackToDistrictInfo(districtName, provinceName, lat, lng));
+                         backDistrictBtn.addEventListener('click', () =>
+                              handleBackToDistrictInfo(districtName, provinceName, lat, lng),
+                         );
                     }
                }, 0);
+
                // Thêm CSS cho scrollbar
                const style = document.createElement('style');
                style.textContent = `
@@ -2635,7 +2786,7 @@ Lưu ý:
 
                // Đóng popup loading và hiển thị kết quả
                map.closePopup(loadingPopup);
-               L.popup({
+               const analysisPopup = L.popup({
                     maxWidth: 400,
                     className: 'district-analysis-popup',
                })
@@ -2662,7 +2813,7 @@ Lưu ý:
           <p>Vĩ độ: ${lat.toFixed(6)}</p>
           <p>Kinh độ: ${lng.toFixed(6)}</p>
       </div>
-      <button id="show-district-btn"
+      <button id="show-district-btn-2"
               style="
                   margin-top: 10px;
                   width: 100%;
@@ -2687,11 +2838,22 @@ Lưu ý:
                )
                .openPopup();
           setTimeout(() => {
-               const showDistrictBtn = document.getElementById('show-district-btn') as HTMLButtonElement;
+               const showDistrictBtn = document.getElementById('show-district-btn-2') as HTMLButtonElement;
                if (showDistrictBtn) {
-                    showDistrictBtn.addEventListener('click', () => showDistrictAnalysis(districtName, provinceName, lat, lng));
+                    showDistrictBtn.addEventListener('click', () =>
+                         showDistrictAnalysis(districtName, provinceName, lat, lng),
+                    );
                }
           }, 0);
+
+          map.on('popupopen', function (e: any) {
+               const showDistrictBtn = document.getElementById('show-district-btn-2') as HTMLButtonElement;
+               if (showDistrictBtn) {
+                    showDistrictBtn.addEventListener('click', () =>
+                         showDistrictAnalysis(districtName, provinceName, lat, lng),
+                    );
+               }
+          });
 
           markers.set(districtName, marker);
      }
@@ -2724,8 +2886,11 @@ Lưu ý:
      // Thêm nút phân tích và lịch sử vào cuối popup
      function createLocationPopup(locationName: string, data: any, countryCode: string) {
           const countryName = countryCode === 'VN' ? 'Việt Nam' : 'Mỹ';
-          const currencyFormat = countryCode === 'VN' ? `${data.income} triệu đồng/tháng` : `$${data.income.toLocaleString()}/year`;
-          const hasExistingIdeas = getBusinessIdeasHistory().some((item: any) => item.location.lat === data.coordinates[0] && item.location.lng === data.coordinates[1]);
+          const currencyFormat =
+               countryCode === 'VN' ? `${data.income} triệu đồng/tháng` : `$${data.income.toLocaleString()}/year`;
+          const hasExistingIdeas = getBusinessIdeasHistory().some(
+               (item: any) => item.location.lat === data.coordinates[0] && item.location.lng === data.coordinates[1],
+          );
           // Add GRDP information to the popup if available
           const grdpInfo = data.grdp
                ? `
@@ -2813,7 +2978,7 @@ Lưu ý:
            hasExistingIdeas
                 ? `
          <button id="show-business-history-btn" class="analyze-business-btn" style="background-color: #2196F3;">
-             <svg width="64px" height="64px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <g clip-path="url(#clip0_429_11075)"> <path d="M5.63606 18.3639C9.15077 21.8786 14.8493 21.8786 18.364 18.3639C21.8787 14.8492 21.8787 9.1507 18.364 5.63598C14.8493 2.12126 9.15077 2.12126 5.63606 5.63598C3.87757 7.39447 2.99889 9.6996 3.00002 12.0044L3 13.9999" stroke="#292929" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></path> <path d="M1 11.9999L3 13.9999L5 11.9999" stroke="#292929" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></path> <path d="M11 7.99994L11 12.9999L16 12.9999" stroke="#292929" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></path> </g> <defs> <clipPath id="clip0_429_11075"> <rect width="24" height="24" fill="white"></rect> </clipPath> </defs> </g></svg>
+             <svg width="16px" height="16px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <g clip-path="url(#clip0_429_11075)"> <path d="M5.63606 18.3639C9.15077 21.8786 14.8493 21.8786 18.364 18.3639C21.8787 14.8492 21.8787 9.1507 18.364 5.63598C14.8493 2.12126 9.15077 2.12126 5.63606 5.63598C3.87757 7.39447 2.99889 9.6996 3.00002 12.0044L3 13.9999" stroke="#292929" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></path> <path d="M1 11.9999L3 13.9999L5 11.9999" stroke="#292929" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></path> <path d="M11 7.99994L11 12.9999L16 12.9999" stroke="#292929" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></path> </g> <defs> <clipPath id="clip0_429_11075"> <rect width="24" height="24" fill="white"></rect> </clipPath> </defs> </g></svg>
              Xem lịch sử ý tưởng
          </button>
      `
@@ -2827,11 +2992,15 @@ Lưu ý:
           setTimeout(() => {
                const showAnalyzeBusinessBtn = document.getElementById('show-business-analysis') as HTMLButtonElement;
                if (showAnalyzeBusinessBtn) {
-                    showAnalyzeBusinessBtn.addEventListener('click', () => showBusinessAnalysis(locationName, countryCode === 'VN'));
+                    showAnalyzeBusinessBtn.addEventListener('click', () =>
+                         showBusinessAnalysis(locationName, countryCode === 'VN'),
+                    );
                }
                const showBusinessHistoryBtn = document.getElementById('show-business-history-btn') as HTMLButtonElement;
                if (showBusinessHistoryBtn) {
-                    showBusinessHistoryBtn.addEventListener('click', () => showBusinessHistory(data.coordinates[0], data.coordinates[1]));
+                    showBusinessHistoryBtn.addEventListener('click', () =>
+                         showBusinessHistory(data.coordinates[0], data.coordinates[1]),
+                    );
                }
           }, 0);
 
@@ -2908,6 +3077,8 @@ Lưu ý:
      function jumpToHistoryPoint(index: any) {
           const history = getSearchHistory();
           const point = history[index];
+          console.log('history', history);
+          console.log('point', point);
 
           if (!point) return;
 
@@ -2916,10 +3087,11 @@ Lưu ý:
           }
 
           const popupContent = createSearchResultPopup(point);
+          console.log('CONTENT', popupContent);
           searchMarker = L.marker([point.lat, point.lng], {
                title: point.name,
           })
-               .bindPopup(popupContent)
+               .bindPopup(popupContent as Content)
                .addTo(map);
 
           updateMapView(point);
@@ -2930,68 +3102,6 @@ Lưu ý:
           historyPanel.classList.remove('visible');
           toggleHistoryBtn.classList.remove('active');
      }
-
-     //      function createBusinessPopup(analysis: any) {
-     //           return `
-     // <div class="business-analysis-popup">
-     //   <h4>${analysis.businessIdea.name}</h4>
-
-     //   <div class="business-section">
-     //       <div class="business-section-title">Mô tả</div>
-     //       <p>${analysis.businessIdea.description}</p>
-     //   </div>
-
-     //   <div class="business-section">
-     //       <div class="business-section-title">Mô hình kinh doanh</div>
-     //       <p><strong>Tổng quan:</strong> ${analysis.businessIdea.businessModel.overview}</p>
-     //       <p><strong>Khách hàng mục tiêu:</strong> ${analysis.businessIdea.businessModel.targetCustomer}</p>
-     //       <p><strong>Giá trị mang lại:</strong> ${analysis.businessIdea.businessModel.valueProposition}</p>
-     //       <p><strong>Nguồn thu:</strong> ${analysis.businessIdea.businessModel.revenueStreams}</p>
-     //   </div>
-
-     //   <div class="business-section">
-     //       <div class="business-section-title">Thách thức và Giải pháp</div>
-     //       ${analysis.businessIdea.challenges
-     //            .map(
-     //                 (item: any) => `
-     //           <div class="challenge-item">
-     //               <p><strong>Thách thức:</strong> ${item.challenge}</p>
-     //               <p><strong>Giải pháp:</strong> ${item.solution}</p>
-     //           </div>
-     //       `,
-     //            )
-     //            .join('')}
-     //   </div>
-
-     //   <div class="business-section">
-     //       <div class="business-section-title">Các bước triển khai</div>
-     //       ${analysis.businessIdea.implementationSteps
-     //            .map(
-     //                 (step: string, index: number) => `
-     //           <div class="implementation-step">
-     //               <div class="step-number">${index + 1}</div>
-     //               <div>${step}</div>
-     //           </div>
-     //       `,
-     //            )
-     //            .join('')}
-     //   </div>
-
-     //   <div style="margin-top: 15px; display: flex; gap: 10px; justify-content: center;">
-     //       <button onclick="${showBusinessHistory(locationData.lat, locationData.lng)}"
-     //               class="analyze-business-btn" style="background-color: #2196F3;">
-     //           <i class="material-icons">history</i>
-     //           Xem lịch sử ý tưởng
-     //       </button>
-     //       <button onclick="${showSearchBusinessAnalysis(window.tempLocationData)}"
-     //               class="analyze-business-btn">
-     //           <i class="material-icons">add_circle</i>
-     //           Tạo ý tưởng mới
-     //       </button>
-     //   </div>
-     // </div>
-     // `;
-     //      }
 
      function validateBusinessAnalysis(data: any) {
           if (!data || !data.businessIdea) {
@@ -3034,7 +3144,11 @@ Lưu ý:
           const point = history[index];
 
           if (confirm(`Bạn có chắc muốn xóa điểm "${point.name}" khỏi lịch sử?`)) {
-               if (searchMarker && searchMarker.getLatLng().lat === point.lat && searchMarker.getLatLng().lng === point.lng) {
+               if (
+                    searchMarker &&
+                    searchMarker.getLatLng().lat === point.lat &&
+                    searchMarker.getLatLng().lng === point.lng
+               ) {
                     map.removeLayer(searchMarker);
                }
                history.splice(index, 1);
@@ -3083,19 +3197,28 @@ Lưu ý:
                <div className="control-buttons">
                     <button className="control-button" id="toggleCountries">
                          <span>
-                              <svg height="25px" width="25px" version="1.1" id="_x32_" xmlns="http://www.w3.org/2000/svg" xmlnsXlink="http://www.w3.org/1999/xlink" viewBox="0 0 512 512" xmlSpace="preserve" fill="#000000">
-                                   <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
-                                   <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g>
+                              <svg
+                                   width="25px"
+                                   height="25px"
+                                   viewBox="0 0 24 24"
+                                   fill="none"
+                                   xmlns="http://www.w3.org/2000/svg"
+                              >
+                                   <g id="SVGRepo_bgCarrier" strokeWidth="0"></g>
+                                   <g id="SVGRepo_tracerCarrier" strokeLinecap="round" strokeLinejoin="round"></g>
                                    <g id="SVGRepo_iconCarrier">
                                         {' '}
-                                        <style type="text/css"> </style>{' '}
-                                        <g>
-                                             {' '}
-                                             <path
-                                                  className="st0"
-                                                  d="M491.874,156.349c-19.451-45.961-51.883-85.014-92.731-112.619C358.303,16.125,308.967-0.008,256.004,0 c-35.306,0-69.024,7.161-99.662,20.118C110.396,39.569,71.335,72.01,43.738,112.849C16.133,153.69-0.008,203.032,0,255.996 c-0.008,35.306,7.161,69.017,20.118,99.655c19.451,45.953,51.891,85.014,92.739,112.611C153.69,495.867,203.032,512,256.004,512 c35.298,0,69.017-7.169,99.647-20.126c45.952-19.452,85.006-51.883,112.611-92.731C495.867,358.302,512,308.968,512,255.996 C512,220.697,504.831,186.979,491.874,156.349z M298.654,344.575c-9.94,14.069-2.064,35.314-13.688,47.509 c-11.702,12.243-17.45,8.4-24.89,25.716c-0.928,2.175-13.64,30.749-17.268,21.682c3.295,8.177,0.254,15.886-9.305,15.878 c-9.488-0.016,1.723,7.915-7.487,10.17c-2.732,0.73-3.033,6.296-1.866,13.456c-6.979-0.984-13.87-2.286-20.634-3.897 c-9.258-29.114-14.386-63.523-14.45-72.598c-0.15-31.432-6.534-19.031-21.944-42.158c-10.456-15.735-19.49-32.694-19.046-51.883 c-0.111,3.454,20.174-48.604,5.51-38.688c-17.816,12.06-21.031-16.72-38.172-19.182c-8.75-1.254-6.201-10.837-16.07-9.273 c-8.876,1.405-19.102-7.757-25.882-12.663c-4.382-3.192-12.608-49.002-19.332-48.89c-9.511,0.055,7.352,31.956,3.882,32.726 c-4.184,0.841-10.639-15.522-15.108-29.614c1.676-4.922,3.525-9.781,5.542-14.537c17.085-40.411,45.667-74.82,81.632-99.114 c12.227-8.265,25.326-15.315,39.094-21.078c0.667-0.033,1.341-0.072,2.008-0.168c12.441-1.468,48.907-15.759,59.101-4.62 c4.287,4.557-55.131,26.12-56.862,35.37c-1.135,6.034,14.648,4.978,16.03,5.073c15.863,0.961-4.628,16.839,5.049,19.57 c14.569,3.906,29.066-62.078,40.237-28.502c4.566,13.632,24.064-10.305,25.446,6.478c1.421,17.507,17.419,21.905-12.433,26.66 c-27.43,4.414-5.438,15.57-23.397,24.961c-16.991,8.892-31.837,13.06-43.833,29.002c-13.434,17.88-14.577,17.316-19.88,39.213 c-2.866,11.869-17.189-8.09-11.615-15.664c-1.946,2.62-18.848-5.661-20.548-1.39c-3.302,8.281-12.203,3.803-19.22,8.781 c-8.884,6.272-17.491,26.509-8.575,36.028c7.098,7.638,31.344-16.37,32.67-8.185c1.016,6.304-8.614,10.734-7.558,16.998 c1.501,9.051,16.332-2.596,16.332,4.43c-0.008,4.526-6.002,29.352,7.074,24.636c7.058-2.541,8.996,2.866,13.449,1.739 c6.09-1.54,9.67-15.8,16.967-14.744c8.638,1.246,21.809,5.208,30.502,7.709c14.196,4.09,13.449,16.07,29.947,18.57 c16.855,2.557,10.202,17.674,8.13,26.12C246.414,313.516,326.76,304.934,298.654,344.575z M392.307,125.934 c0.007,0,14.942,0.167,18.109-0.325c3.168-0.493,3.065-7.948,3.034-9.536c-0.024-1.611-8.575-5.438-6.471-6.47 c2.111-1.032,7.391-2.549,8.955-3.589c0.731-0.484,2.564-2.08,4.541-3.85c6.526,6.962,12.616,14.346,18.229,22.102 c-1.032,0.651-2.096,1.43-2.866,2.208c-2.072,2.104-8.456-0.643-8.456-0.643c-2.779,2.969-5.55,5.962-8.344,8.956 c-1.374,3.184-2.74,6.383-4.121,9.574c0,0-9.519,4.724-13.782,5.224c-4.264,0.492-11.258-3.335-12.362-4.954 C387.71,143.011,392.314,125.917,392.307,125.934z M463.547,343.662c-1.342,3.176-2.779,6.304-4.264,9.401 c-1.492-4.7-2.969-8.876-4.27-11.139c-3.105-5.344-7.257-11.766-1.898-24.723c5.366-12.957-3.002-29.114-7.217-33.44 c-4.216-4.311-4.2-7.558,0.024-14.052c4.223-6.487-1.048-8.654-5.28-8.654c-4.24,0-7.424-7.582-12.735-6.502 c-5.304,1.072-25.589,6.494-33.123,5.406c-7.48-1.072-31.242-23.952-31.29-29.415c0-5.454,1.001-26.112,3.144-29.352 c2.16-3.247,13.918-18.046,18.157-24.493c4.24-6.454,10.592-15.021,15.926-16.054c5.359-1.032,29.765-5.081,37.101-7.129 c7.352-2.057,6.352,1.897,8.519,6.208c1.413,0.191,2.811,0.389,4.216,0.58c0.008,0,5.812,1.144,9.504,3.866 c0.754,0.556,1.564,1.088,2.39,1.62c12.083,27.613,18.784,58.092,18.792,90.207C481.235,287.142,474.932,316.724,463.547,343.662z"
-                                             ></path>{' '}
-                                        </g>{' '}
+                                        <circle cx="12" cy="12" r="10" stroke="#1C274C" strokeWidth="1.5"></circle>{' '}
+                                        <path
+                                             d="M6 4.71053C6.78024 5.42105 8.38755 7.36316 8.57481 9.44737C8.74984 11.3955 10.0357 12.9786 12 13C12.7549 13.0082 13.5183 12.4629 13.5164 11.708C13.5158 11.4745 13.4773 11.2358 13.417 11.0163C13.3331 10.7108 13.3257 10.3595 13.5 10C14.1099 8.74254 15.3094 8.40477 16.2599 7.72186C16.6814 7.41898 17.0659 7.09947 17.2355 6.84211C17.7037 6.13158 18.1718 4.71053 17.9377 4"
+                                             stroke="#1C274C"
+                                             strokeWidth="1.5"
+                                        ></path>{' '}
+                                        <path
+                                             d="M22 13C21.6706 13.931 21.4375 16.375 17.7182 16.4138C17.7182 16.4138 14.4246 16.4138 13.4365 18.2759C12.646 19.7655 13.1071 21.3793 13.4365 22"
+                                             stroke="#1C274C"
+                                             strokeWidth="1.5"
+                                        ></path>{' '}
                                    </g>
                               </svg>
                          </span>
@@ -3103,14 +3226,20 @@ Lưu ý:
                     </button>
                     <button className="control-button" id="toggleHistory">
                          <span>
-                              <svg viewBox="0 0 24 24" width="25px" height="25px" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                   <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
-                                   <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g>
+                              <svg
+                                   viewBox="0 0 24 24"
+                                   width="25px"
+                                   height="25px"
+                                   fill="none"
+                                   xmlns="http://www.w3.org/2000/svg"
+                              >
+                                   <g id="SVGRepo_bgCarrier" strokeWidth="0"></g>
+                                   <g id="SVGRepo_tracerCarrier" strokeLinecap="round" strokeLinejoin="round"></g>
                                    <g id="SVGRepo_iconCarrier">
                                         {' '}
                                         <path
-                                             fill-rule="evenodd"
-                                             clip-rule="evenodd"
+                                             fillRule="evenodd"
+                                             clipRule="evenodd"
                                              d="M5.01112 11.5747L6.29288 10.2929C6.68341 9.90236 7.31657 9.90236 7.7071 10.2929C8.09762 10.6834 8.09762 11.3166 7.7071 11.7071L4.7071 14.7071C4.51956 14.8946 4.26521 15 3.99999 15C3.73477 15 3.48042 14.8946 3.29288 14.7071L0.292884 11.7071C-0.0976406 11.3166 -0.0976406 10.6834 0.292884 10.2929C0.683408 9.90236 1.31657 9.90236 1.7071 10.2929L3.0081 11.5939C3.22117 6.25933 7.61317 2 13 2C18.5229 2 23 6.47715 23 12C23 17.5228 18.5229 22 13 22C9.85817 22 7.05429 20.5499 5.22263 18.2864C4.87522 17.8571 4.94163 17.2274 5.37096 16.88C5.80028 16.5326 6.42996 16.599 6.77737 17.0283C8.24562 18.8427 10.4873 20 13 20C17.4183 20 21 16.4183 21 12C21 7.58172 17.4183 4 13 4C8.72441 4 5.23221 7.35412 5.01112 11.5747ZM13 5C13.5523 5 14 5.44772 14 6V11.5858L16.7071 14.2929C17.0976 14.6834 17.0976 15.3166 16.7071 15.7071C16.3166 16.0976 15.6834 16.0976 15.2929 15.7071L12.2929 12.7071C12.1054 12.5196 12 12.2652 12 12V6C12 5.44772 12.4477 5 13 5Z"
                                              fill="#000000"
                                         ></path>{' '}
@@ -3121,17 +3250,23 @@ Lưu ý:
                     </button>
                     <button className="control-button" id="toggleAnalysis">
                          <span>
-                              <svg viewBox="0 0 24 24" width="25px" height="25px" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                   <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
-                                   <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g>
+                              <svg
+                                   viewBox="0 0 24 24"
+                                   width="25px"
+                                   height="25px"
+                                   fill="none"
+                                   xmlns="http://www.w3.org/2000/svg"
+                              >
+                                   <g id="SVGRepo_bgCarrier" strokeWidth="0"></g>
+                                   <g id="SVGRepo_tracerCarrier" strokeLinecap="round" strokeLinejoin="round"></g>
                                    <g id="SVGRepo_iconCarrier">
                                         {' '}
                                         <path
                                              d="M3 21V17M9 21V13M15 21V15M21 21V11M8.43934 5.56066C8.71079 5.83211 9.08579 6 9.5 6C9.91421 6 10.2892 5.83211 10.5607 5.56066M8.43934 5.56066C8.16789 5.28921 8 4.91421 8 4.5C8 3.67157 8.67157 3 9.5 3C10.3284 3 11 3.67157 11 4.5C11 4.91421 10.8321 5.28921 10.5607 5.56066M8.43934 5.56066L5.56066 8.43934M5.56066 8.43934C5.28921 8.16789 4.91421 8 4.5 8C3.67157 8 3 8.67157 3 9.5C3 10.3284 3.67157 11 4.5 11C5.32843 11 6 10.3284 6 9.5C6 9.08579 5.83211 8.71079 5.56066 8.43934ZM10.5607 5.56066L13.4393 8.43934M13.4393 8.43934C13.1679 8.71079 13 9.08579 13 9.5C13 10.3284 13.6716 11 14.5 11C15.3284 11 16 10.3284 16 9.5C16 9.08579 15.8321 8.71079 15.5607 8.43934M13.4393 8.43934C13.7108 8.16789 14.0858 8 14.5 8C14.9142 8 15.2892 8.16789 15.5607 8.43934M15.5607 8.43934L18.4393 5.56066M18.4393 5.56066C18.7108 5.83211 19.0858 6 19.5 6C20.3284 6 21 5.32843 21 4.5C21 3.67157 20.3284 3 19.5 3C18.6716 3 18 3.67157 18 4.5C18 4.91421 18.1679 5.28921 18.4393 5.56066Z"
                                              stroke="#000000"
-                                             stroke-width="2"
-                                             stroke-linecap="round"
-                                             stroke-linejoin="round"
+                                             strokeWidth="2"
+                                             strokeLinecap="round"
+                                             strokeLinejoin="round"
                                         ></path>{' '}
                                    </g>
                               </svg>
@@ -3143,7 +3278,12 @@ Lưu ý:
                     <div className="panel-header">
                          <h3>Lịch sử tìm kiếm</h3>
                          <button className="close-button" id="closeHistoryPanel">
-                              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="size-6">
+                              <svg
+                                   xmlns="http://www.w3.org/2000/svg"
+                                   viewBox="0 0 24 24"
+                                   fill="currentColor"
+                                   className="size-6"
+                              >
                                    <path
                                         fillRule="evenodd"
                                         d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25Zm-1.72 6.97a.75.75 0 1 0-1.06 1.06L10.94 12l-1.72 1.72a.75.75 0 1 0 1.06 1.06L12 13.06l1.72 1.72a.75.75 0 1 0 1.06-1.06L13.06 12l1.72-1.72a.75.75 0 1 0-1.06-1.06L12 10.94l-1.72-1.72Z"
@@ -3154,7 +3294,12 @@ Lưu ý:
                     </div>
                     <div id="history-list"></div>
                     <button className="clear-history" onClick={() => clearHistory()}>
-                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="size-6">
+                         <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              viewBox="0 0 24 24"
+                              fill="currentColor"
+                              className="size-6"
+                         >
                               <path
                                    fillRule="evenodd"
                                    d="M16.5 4.478v.227a48.816 48.816 0 0 1 3.878.512.75.75 0 1 1-.256 1.478l-.209-.035-1.005 13.07a3 3 0 0 1-2.991 2.77H8.084a3 3 0 0 1-2.991-2.77L4.087 6.66l-.209.035a.75.75 0 0 1-.256-1.478A48.567 48.567 0 0 1 7.5 4.705v-.227c0-1.564 1.213-2.9 2.816-2.951a52.662 52.662 0 0 1 3.369 0c1.603.051 2.815 1.387 2.815 2.951Zm-6.136-1.452a51.196 51.196 0 0 1 3.273 0C14.39 3.05 15 3.684 15 4.478v.113a49.488 49.488 0 0 0-6 0v-.113c0-.794.609-1.428 1.364-1.452Zm-.355 5.945a.75.75 0 1 0-1.5.058l.347 9a.75.75 0 1 0 1.499-.058l-.346-9Zm5.48.058a.75.75 0 1 0-1.498-.058l-.347 9a.75.75 0 0 0 1.5.058l.345-9Z"
@@ -3167,7 +3312,12 @@ Lưu ý:
                <div id="countries-panel" className="countries-panel">
                     <div className="panel-header">
                          <button className="back-button" id="backButton">
-                              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="size-6">
+                              <svg
+                                   xmlns="http://www.w3.org/2000/svg"
+                                   viewBox="0 0 24 24"
+                                   fill="currentColor"
+                                   className="size-6"
+                              >
                                    <path
                                         fillRule="evenodd"
                                         d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25Zm-4.28 9.22a.75.75 0 0 0 0 1.06l3 3a.75.75 0 1 0 1.06-1.06l-1.72-1.72h5.69a.75.75 0 0 0 0-1.5h-5.69l1.72-1.72a.75.75 0 0 0-1.06-1.06l-3 3Z"
@@ -3177,7 +3327,12 @@ Lưu ý:
                          </button>
                          <h3 id="title-list">Danh sách các tỉnh</h3>
                          <button className="close-button" id="closeCountriesPanel">
-                              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="size-6">
+                              <svg
+                                   xmlns="http://www.w3.org/2000/svg"
+                                   viewBox="0 0 24 24"
+                                   fill="currentColor"
+                                   className="size-6"
+                              >
                                    <path
                                         fillRule="evenodd"
                                         d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25Zm-1.72 6.97a.75.75 0 1 0-1.06 1.06L10.94 12l-1.72 1.72a.75.75 0 1 0 1.06 1.06L12 13.06l1.72 1.72a.75.75 0 1 0 1.06-1.06L13.06 12l1.72-1.72a.75.75 0 1 0-1.06-1.06L12 10.94l-1.72-1.72Z"
@@ -3189,10 +3344,26 @@ Lưu ý:
                     <div className="countries-list" id="countriesList"></div>
 
                     <div className="search-container search-in-countries">
-                         <input type="text" className="search-input" id="searchInput" placeholder="Nhập địa điểm để tìm kiếm..." />
+                         <input
+                              type="text"
+                              className="search-input"
+                              id="searchInput"
+                              placeholder="Nhập địa điểm để tìm kiếm..."
+                         />
                          <button className="search-button" onClick={() => searchLocation()}>
-                              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="size-6">
-                                   <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+                              <svg
+                                   xmlns="http://www.w3.org/2000/svg"
+                                   fill="none"
+                                   viewBox="0 0 24 24"
+                                   strokeWidth="1.5"
+                                   stroke="currentColor"
+                                   className="size-6"
+                              >
+                                   <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"
+                                   />
                               </svg>
                          </button>
                          <span id="loading" className="loading">
@@ -3200,9 +3371,9 @@ Lưu ý:
                          </span>
                     </div>
                </div>
-               <div id="map" className={className}></div>
+               <div id="map" ref={ref} className={props.className}></div>
           </>
      );
-};
+});
 
 export default MapIndustry;
